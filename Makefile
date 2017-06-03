@@ -111,44 +111,44 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named bin/cell
+# Target rules for targets named bin/psfg
 
 # Build rule for target.
-bin/cell: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 bin/cell
-.PHONY : bin/cell
+bin/psfg: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 bin/psfg
+.PHONY : bin/psfg
 
 # fast build rule for target.
-bin/cell/fast:
-	$(MAKE) -f CMakeFiles/bin/cell.dir/build.make CMakeFiles/bin/cell.dir/build
-.PHONY : bin/cell/fast
+bin/psfg/fast:
+	$(MAKE) -f CMakeFiles/bin/psfg.dir/build.make CMakeFiles/bin/psfg.dir/build
+.PHONY : bin/psfg/fast
 
-src/conv_main.o: src/conv_main.cpp.o
+src/psfg.o: src/psfg.cpp.o
 
-.PHONY : src/conv_main.o
+.PHONY : src/psfg.o
 
 # target to build an object file
-src/conv_main.cpp.o:
-	$(MAKE) -f CMakeFiles/bin/cell.dir/build.make CMakeFiles/bin/cell.dir/src/conv_main.cpp.o
-.PHONY : src/conv_main.cpp.o
+src/psfg.cpp.o:
+	$(MAKE) -f CMakeFiles/bin/psfg.dir/build.make CMakeFiles/bin/psfg.dir/src/psfg.cpp.o
+.PHONY : src/psfg.cpp.o
 
-src/conv_main.i: src/conv_main.cpp.i
+src/psfg.i: src/psfg.cpp.i
 
-.PHONY : src/conv_main.i
+.PHONY : src/psfg.i
 
 # target to preprocess a source file
-src/conv_main.cpp.i:
-	$(MAKE) -f CMakeFiles/bin/cell.dir/build.make CMakeFiles/bin/cell.dir/src/conv_main.cpp.i
-.PHONY : src/conv_main.cpp.i
+src/psfg.cpp.i:
+	$(MAKE) -f CMakeFiles/bin/psfg.dir/build.make CMakeFiles/bin/psfg.dir/src/psfg.cpp.i
+.PHONY : src/psfg.cpp.i
 
-src/conv_main.s: src/conv_main.cpp.s
+src/psfg.s: src/psfg.cpp.s
 
-.PHONY : src/conv_main.s
+.PHONY : src/psfg.s
 
 # target to generate assembly for a file
-src/conv_main.cpp.s:
-	$(MAKE) -f CMakeFiles/bin/cell.dir/build.make CMakeFiles/bin/cell.dir/src/conv_main.cpp.s
-.PHONY : src/conv_main.cpp.s
+src/psfg.cpp.s:
+	$(MAKE) -f CMakeFiles/bin/psfg.dir/build.make CMakeFiles/bin/psfg.dir/src/psfg.cpp.s
+.PHONY : src/psfg.cpp.s
 
 # Help Target
 help:
@@ -158,10 +158,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... bin/cell"
-	@echo "... src/conv_main.o"
-	@echo "... src/conv_main.i"
-	@echo "... src/conv_main.s"
+	@echo "... bin/psfg"
+	@echo "... src/psfg.o"
+	@echo "... src/psfg.i"
+	@echo "... src/psfg.s"
 .PHONY : help
 
 

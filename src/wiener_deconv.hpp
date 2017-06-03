@@ -152,7 +152,3 @@ void wienerFilter(Mat &src, Mat &dst, Mat &_h, double k)
     Recomb(dst, dst);
 }
 
-Mat deblurring_wiener(Mat I)
-{
-
-}
