@@ -1,4 +1,4 @@
-#include "psf_generate.hpp"
+#include "psf_gen2.hpp"
 
 #define WIDTH_PSF 32
 #define HEIGHT_PSF 32
@@ -16,17 +16,7 @@ int main(void)
 {
 	std::cout << "Here to show something ablout the end!" << std::endl;
 
-    gaussian2d(psf_data, shape, udim);    
+  bessel_series();
 
-    // psf(0, psf_data, shape, udim, 1.0, 1.2/1.33, 1.0, 1.0, 80);
-
-    for (int i = 0; i < WIDTH_PSF; i++)
-    {
-        for (int j = 0; j < HEIGHT_PSF; j++)
-        {
-            printf("%4lf ", psf_data[i*HEIGHT_PSF+j]);
-        }
-        std::cout << std::endl;
-    }
-    return 0;
+  return 0;
 }
