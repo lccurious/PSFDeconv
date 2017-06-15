@@ -19,6 +19,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "vtkTools.hpp"
+#include "cvTools.hpp"
 
 typedef boost::multiprecision::cpp_dec_float_50 float_type;
 
@@ -33,7 +34,7 @@ typedef boost::math::policies::policy<
 
 int bessel_series()
 {
-	std::vector<double> bessel_table, X;
+	std::vector<double> bessel_table, X, bess_t;
 	double bessel_tmp, bessel_sum = 0;
 	double v = 0;
 	
@@ -45,14 +46,15 @@ int bessel_series()
 			bessel_tmp = boost::math::sph_bessel(0, v);
 			v += 0.01;
 			bessel_sum += bessel_tmp * 0.01;
-			std::cout << bessel_tmp << '\t' << bessel_sum << '\n';
 			X.push_back(v);
+			bess_t.push_back(bessel_tmp);
 			bessel_table.push_back(bessel_sum);
 		}
 		std::thread vtk_t(vtk_2Dplot, X, bessel_table);
-	
+		std::thread cv_t(cv_draw_pie, bessel_table);
 		std::cout << "Viusalization finished!" << std::endl;
 		vtk_t.join();
+		cv_t.join();
 	}
 	catch( std::exception ex )
 	{
@@ -62,3 +64,33 @@ int bessel_series()
 	return 0;
 }
 
+double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
+{
+	double const_ratio = k * NA / n_i * std::sqrt(x*x + y*y);
+	double const_opd = -0.5 * k * z * NA*NA/n_i/n_i;
+	
+	std::complex<double>bess_sum(0.0, 0.0);
+	double bess_tmp, v = 0.0;
+	int num_p = 500;
+	double delta_v = 1.0 / 500;
+	std::complex<double>opd(0.0, v);
+	
+	// Always using try for unpredicted error;
+	try
+	{
+		for (int i = 0; i <= num_p; i++)
+		{
+			bess_tmp = boost::math::sph_bessel(0, v*const_ratio);
+			opd.imag(v*v * const_opd);
+			bess_sum += bess_tmp * std::exp(opd) * v;
+			v += delta_v;
+		}
+		// std::cout << "integration:\t" << std::abs(bess_sum) << std::endl;
+	}
+	catch ( std::exception ex)
+	{
+		std::cout <<  "Thrown exception " << ex.what() << std::endl;
+	}
+
+	return std::abs(bess_sum);
+}

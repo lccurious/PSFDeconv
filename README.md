@@ -2,6 +2,18 @@
 
 本项目目的是通过C++实现PSF数据生成和图像的反卷积，目前已经尝试使用基于高斯模型的PSF模型。
 
+## Dependence
+- Boost >= 1.58
+- OpenCV >= 3.1.0
+- VTK >= 5.1
+
+## Build & Run
+```
+cmake .
+make
+./bin/psfg
+```
+
 ## TODO:
 - [x] 使用Boost库生成贝塞尔表
 - [ ] 通过OpenCV对图像进行滤波
