@@ -21,3 +21,6 @@ make
 - [x] 引入多线程
 - [ ] 对图像进行维纳滤波
 - [x] 加入vtk的可视化内容
+
+## Current Result
+![Born&wolf](images/born_wolf.png)
