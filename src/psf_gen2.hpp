@@ -71,8 +71,8 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
 	
 	std::complex<double>bess_sum(0.0, 0.0);
 	double bess_tmp, v = 0.0;
-	int num_p = 500;
-	double delta_v = 1.0 / 500;
+	int num_p = 1000;
+	double delta_v = 1.0 / num_p;
 	std::complex<double>opd(0.0, v);
 	
 	// Always using try for unpredicted error;
@@ -93,4 +93,30 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
 	}
 
 	return std::abs(bess_sum);
+}
+
+
+int born_wolf(int z, std::vector<std::vector<double> >& M2D, double k, double NA, double n_i, int num_p)
+{
+	int step = 1200 / num_p;
+	double bessel_res = 0.0;
+	try
+	{
+		for (int i = 0; i < num_p; i++)
+		{
+			std::cout << " " << i << " / " << num_p << " Completed." << std::endl;
+			M2D[i].resize(num_p);
+			for (int j = 0; j <= i; j++)
+			{
+				bessel_res = born_wolf_point(k, NA, n_i, j*step, i*step, z);
+				M2D[i][j] = bessel_res;
+				M2D[j][i] = bessel_res;
+			}
+		}
+	}
+	catch (std::exception ex)
+	{
+		std::cout << "Thrown excetion : " << ex.what() << std::endl;
+	}
+	return 0;
 }

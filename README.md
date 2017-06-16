@@ -23,4 +23,6 @@ make
 - [x] 加入vtk的可视化内容
 
 ## Current Result
-![Born&wolf](images/born_wolf.png)
+|PSF|One Line Value|
+|:---:|:---:|
+|![PSF](images/Complete_PSF.png)|![Born&wolf](images/born_wolf.png)|
