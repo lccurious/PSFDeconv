@@ -42,7 +42,7 @@ int main(int argc, char** argv)
 	cv::imshow("PSF 1/4", img);
 	cv::waitKey(-1);
 	*/
-	int num_p = 512;
+	int num_p = 120;
 	std::vector<std::vector<double> >psf_matrix(num_p);
 	born_wolf(0, psf_matrix,M_2PI/ex_wavelen, NA, refr_index, num_p);
 	try
