@@ -2,6 +2,7 @@
 #include <atomic>
 
 #include "psf_gen2.hpp"
+#include "cvTools.hpp"
 #include "vtkTools.hpp"
 
 #define WIDTH_PSF 32
@@ -19,49 +20,26 @@ double pinhole_radius = 0.55;
 
 int main(int argc, char** argv)
 {
+	clock_t start, finish;
+	double duration;
 	std::cout << "Here to show something ablout the end!" << std::endl;
-	/*
-	std::vector<double> X,Y;
-	cv::Mat img = Mat::zeros(800, 800, CV_8U);
-	uchar *p1, *p2;
-	for (int i = 0; i < 800; i++)
-	{
-		p1 = img.ptr<uchar>(799-i);
-		for (int j = 0; j <= i; j++)
-		{
-			p1[j] = (int)born_wolf_point(M_2PI/ex_wavelen,NA, refr_index, i, j, 10);
-			p2 = img.ptr<uchar>(799-j);
-			p2[i] = p1[j];
-		}
-		std::cout<< i+1 << " / 800 finised!" << std::endl; 
-		Y.push_back(p1[0]);
-		X.push_back(i);
-	}
-	std::thread vtk_2d(vtk_2Dplot, X, Y);
-	vtk_2d.join();
-	cv::imshow("PSF 1/4", img);
-	cv::waitKey(-1);
-	*/
-	int num_p = 120;
+	int num_p = 512;
+    int stack_depth = 12;
 	std::vector<std::vector<double> >psf_matrix(num_p);
-	born_wolf(0, psf_matrix,M_2PI/ex_wavelen, NA, refr_index, num_p);
-	try
+	std::vector<std::vector<double> >psf_matrix_copy(num_p);
+	boost::progress_display *show_progress = NULL;
+    show_progress = new boost::progress_display(stack_depth);
+
+    start = clock();
+    for (int i = 0; i < stack_depth; i++)
 	{
-		std::ofstream bess_file("Bessel.txt");
-		for (int i = 0; i < num_p; i++)
-		{
-			for (int j = 0; j < num_p; j++)
-			{
-				bess_file << psf_matrix[i][j] << "\t";
-			}
-			bess_file << std::endl;
-		}
-		bess_file.close();
+		born_wolf(i, psf_matrix, M_2PI/ex_wavelen, NA, refr_index, num_p);
+        ++(*show_progress);
 	}
-	catch (std::exception ex)
-	{
-		std::cout << "Thrown excetion : " << ex.what() << std::endl;
-	}
+    finish = clock();
+    std::cout << "Total Time spent: " << (finish - start)/CLOCKS_PER_SEC
+              << " Seconds" << std::endl;
+
 	show2DVec(psf_matrix);
-  return 0;
+    return 0;
 }

@@ -3,23 +3,15 @@
  */
 #pragma once
 #include <vector>
-#include <iostream>
-#include <fstream>
-#include <algorithm>
 #include <iterator>
 #include <complex>
 #include <cmath>
-#include <thread>
-#include <atomic>
 
 #include <boost/lambda/lambda.hpp>
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/math/special_functions/bessel.hpp>
+#include <boost/progress.hpp>
 
-#include <opencv2/opencv.hpp>
-
-#include "vtkTools.hpp"
-#include "cvTools.hpp"
 
 typedef boost::multiprecision::cpp_dec_float_50 float_type;
 
@@ -50,11 +42,6 @@ int bessel_series()
 			bess_t.push_back(bessel_tmp);
 			bessel_table.push_back(bessel_sum);
 		}
-		std::thread vtk_t(vtk_2Dplot, X, bessel_table);
-		std::thread cv_t(cv_draw_pie, bessel_table);
-		std::cout << "Viusalization finished!" << std::endl;
-		vtk_t.join();
-		cv_t.join();
 	}
 	catch( std::exception ex )
 	{
@@ -71,7 +58,7 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
 	
 	std::complex<double>bess_sum(0.0, 0.0);
 	double bess_tmp, v = 0.0;
-	int num_p = 1000;
+	int num_p = 10;
 	double delta_v = 1.0 / num_p;
 	std::complex<double>opd(0.0, v);
 	
@@ -85,7 +72,6 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
 			bess_sum += bess_tmp * std::exp(opd) * v;
 			v += delta_v;
 		}
-		// std::cout << "integration:\t" << std::abs(bess_sum) << std::endl;
 	}
 	catch ( std::exception ex)
 	{
@@ -96,15 +82,15 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
 }
 
 
-int born_wolf(int z, std::vector<std::vector<double> >& M2D, double k, double NA, double n_i, int num_p)
+int born_wolf(int z, std::vector<std::vector<double> >& M2D,
+              double k, double NA, double n_i, int num_p)
 {
-	int step = 1200 / num_p;
+	int step = 800 / num_p;
 	double bessel_res = 0.0;
 	try
 	{
 		for (int i = 0; i < num_p; i++)
 		{
-			std::cout << " " << i << " / " << num_p << " Completed." << std::endl;
 			M2D[i].resize(num_p);
 			for (int j = 0; j <= i; j++)
 			{
@@ -120,3 +106,35 @@ int born_wolf(int z, std::vector<std::vector<double> >& M2D, double k, double NA
 	}
 	return 0;
 }
+
+int born_wolf_zstack(std::vector<int> zs,
+                     std::vector<std::vector<std::vector<double> > >& M3D,
+                     double k, double NA, double n_i, int num_p)
+{
+	int step = 800 / num_p;
+	int z_num = zs.size();
+	double bessel_res = 0.0;
+	try
+	{
+		for (int z = 0; z < num_p; z++)
+		{
+			M3D[k].resize(z_num);
+			for (int i = 0; i < num_p; i++)
+			{
+				M3D[k][i].resize(num_p);
+				for (int j = 0; j <= i; j++)
+				{
+					bessel_res = born_wolf_point(k, NA, n_i, j*step, i*step, zs[k]);
+					M3D[z][i][j] = bessel_res;
+					M3D[z][j][i] = bessel_res;
+				}
+			}
+			std::cout << " " << z << " / " << z_num << "\tfinished" << std::endl; 
+		}
+	}
+	catch (std::exception ex)
+	{
+		std::cout << "Thrown exception : " << ex.what() << std::endl;
+	}
+	return 0;
+}	
