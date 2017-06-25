@@ -23,8 +23,8 @@ int main(int argc, char** argv)
 	clock_t start, finish;
 	double duration;
 	std::cout << "Here to show something ablout the end!" << std::endl;
-	int num_p = 512;
-    int stack_depth = 12;
+	int num_p = 256;
+    int stack_depth = 1;
 	std::vector<std::vector<double> >psf_matrix(num_p);
 	std::vector<std::vector<double> >psf_matrix_copy(num_p);
 	boost::progress_display *show_progress = NULL;

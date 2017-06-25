@@ -11,7 +11,8 @@
 ```
 cmake .
 make
-./bin/psfg
+./bin/psf_2DDemo
+./bin/psf_speed
 ```
 
 ## TODO:

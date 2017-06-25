@@ -33,7 +33,7 @@ int psf_step(int z, std::vector<std::vector<double> >& M2D,
 int main()
 {
     int stack_depth = 512;
-    int num_p = 512;
+    int num_p = 256;
     boost::thread psf_thrd[stack_depth];
     std::vector<std::vector<std::vector<double> > >psf_matrix(stack_depth);
     // Initial the 3D matrix
