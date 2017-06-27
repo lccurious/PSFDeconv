@@ -4,8 +4,8 @@
 // This file will try to use some multiprocess method to
 // Make program faster
 
-#include "psf_gen2.hpp"
 #include <boost/thread.hpp>
+#include "psf_gen2.h"
 #include <boost/progress.hpp>
 #include <iostream>
 

@@ -1,9 +1,6 @@
-#include <thread>
-#include <atomic>
-
-#include "psf_gen2.hpp"
-#include "cvTools.hpp"
-#include "vtkTools.hpp"
+#include "cvTools.h"
+#include "vtkTools.h"
+#include "psf_gen2.h"
 
 #define WIDTH_PSF 32
 #define HEIGHT_PSF 32

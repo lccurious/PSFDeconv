@@ -1,28 +1,4 @@
-#include <iostream>
-#include <algorithm>
-#include <cmath>
-#include <cstring>
-#include <cstdio>
-
-#ifndef M_PI
-#define M_PI (3.1415926535897932384626433832795)
-#endif
-#define M_2PI (6.283185307179586476925286766559)
-
-#define BESSEL_LEN 1010 /* length of Bessel function lookup table */
-#define BESSEL_RES 1.0 /* resolution of Bessel function lookup table */
-#define BESSEL_INT 60		/* steps for integrating the Bessel integral */
-
-/* lookup table for Bessel function of the first kind, orders 0, 1, and 2 */
-double bessel_lut[BESSEL_LEN*3];
-
-/*****************************************************************************/
-/* C functions
- */
-
-#define floor_int(x) (int)floor((double)(x))
-#define ceil_int(x) (int)ceil((double)(x))
-
+#include "guassian_psf.h"
 
 /* Return Bessel function x for orders 0, 1, and 2.
  * Values are linearly interpolated from the lookup table.
