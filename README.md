@@ -9,10 +9,8 @@
 
 ## Build & Run
 ```
-cmake .
 make
-./bin/psf_2DDemo
-./bin/psf_speed
+./bin/psf
 ```
 
 ## TODO:
@@ -22,6 +20,7 @@ make
 - [x] 引入多线程
 - [ ] 对图像进行维纳滤波
 - [x] 加入vtk的可视化内容
+- [x] 通过matio读取并对照mat文件
 
 ## Current Result
 |PSF|One Line Value|
