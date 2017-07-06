@@ -28,6 +28,9 @@
 #include <vtk-7.1/vtkContextScene.h>
 #include <vtk-7.1/vtkPen.h>
 
+/* 绘制二维图像的工具
+ * 传入的都是双精度类型
+ */
 int vtk_2Dplot(std::vector<double> X, std::vector<double>Y);
 
 #endif //PSF_VTKTOOLS_H

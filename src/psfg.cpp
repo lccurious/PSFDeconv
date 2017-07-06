@@ -22,17 +22,22 @@ int main(int argc, char** argv)
 	std::cout << "Here to show something ablout the end!" << std::endl;
 	int num_p = 256;
     int stack_depth = 1;
+
+	// 预分配程序矩阵空间
 	std::vector<std::vector<double> >psf_matrix(num_p);
 	std::vector<std::vector<double> >psf_matrix_copy(num_p);
 	boost::progress_display *show_progress = NULL;
     show_progress = new boost::progress_display(stack_depth);
-
+	
+	// 性能测试计时开始
     start = clock();
     for (int i = 0; i < stack_depth; i++)
 	{
 		born_wolf(i, psf_matrix, M_2PI/ex_wavelen, NA, refr_index, num_p);
         ++(*show_progress);
 	}
+	
+	// 性能测试计时结束
     finish = clock();
     std::cout << "Total Time spent: " << (finish - start)/CLOCKS_PER_SEC
               << " Seconds" << std::endl;

@@ -27,10 +27,16 @@ typedef boost::math::policies::policy<
 	boost::math::policies::evaluation_error<boost::math::policies::ignore_error>
 > ignore_all_policy;
 
+/* 一个测试函数，用于测试贝塞尔函数是否能够正常生成
+ */
 int bessel_series(void);
 
+/* 对于某一个单独的像素点，生成基于born&wolf点扩散函数在那个像素的值
+ */
 double born_wolf_point(double k, double NA, double n_i, int x, int y, int z);
 
+/* 对于某一个z值，生成在对应的整个平面的点扩散函数二维矩阵
+ */
 int born_wolf(int z, std::vector<std::vector<double> >& M2D,
               double k, double NA, double n_i, int num_p);
 

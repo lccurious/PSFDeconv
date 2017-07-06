@@ -75,7 +75,7 @@ int show2DVec(const std::vector<std::vector<double> >&plane)
         }
     }
     cv::imshow("Complete PSF", img);
-    cv::imwrite("images/Complete PSF.png", img);
+    cv::imwrite("images/_Complete PSF.png", img);
     cv::waitKey(-1);
     return 0;
 }

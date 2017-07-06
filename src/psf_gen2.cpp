@@ -98,7 +98,7 @@ double born_wol_acc(std::vector<int>z_stack ,
 int born_wolf(int z, std::vector<std::vector<double> >& M2D,
               double k, double NA, double n_i, int num_p)
 {
-    int step = 800 / num_p;
+    int step = 7000 / num_p;
     double bessel_res = 0.0;
     try
     {

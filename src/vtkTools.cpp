@@ -8,7 +8,7 @@
  * Author: hzn
  */
 
-int vtk_2Dplot(std::vector<double> X, std::vector<double>Y)
+int vtk_2Dplot(std::vector<double> X, std::vector<double> Y)
 {
     if (X.size() != Y.size())
     {

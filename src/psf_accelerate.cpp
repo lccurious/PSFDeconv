@@ -32,7 +32,7 @@ int psf_step(int z, std::vector<std::vector<double> >& M2D,
 
 int main()
 {
-    int stack_depth = 512;
+    int stack_depth = 65;
     int num_p = 256;
     boost::thread psf_thrd[stack_depth];
     std::vector<std::vector<std::vector<double> > >psf_matrix(stack_depth);
@@ -82,8 +82,8 @@ int main()
      */
     while(psf_status < stack_depth) {}
     clock_t finish = clock();
-    std::cout << "Time spent: " << (finish-start) / CLOCKS_PER_SEC
-              << "\tBuilt Time: " << (midum-start) / CLOCKS_PER_SEC
+    std::cout << "Time spent: " << (finish-start) / CLOCKS_PER_SEC << " s"
+              << "\tBuilt Time: " << (finish-midum) / CLOCKS_PER_SEC << " s"
               << std::endl;
 
     return 0;
