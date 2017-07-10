@@ -21,6 +21,7 @@ make
 - [ ] 对图像进行维纳滤波
 - [x] 加入vtk的可视化内容
 - [x] 通过matio读取并对照mat文件
+- [ ] 图像尺寸对比
 
 ## Current Result
 |PSF|One Line Value|

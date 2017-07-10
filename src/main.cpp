@@ -74,27 +74,40 @@ int main(int argc, const char *argv[])
     }
 
     // show psf demon
-    std::vector<std::vector<double> >psf_matrix(psf_size);
-    boost::progress_display *show_progress = NULL;
-    show_progress = new boost::progress_display(stack_depth);
+    std::vector<std::vector<double> > psf_matrix;
+    std::vector<double> ori_vec, int_vec;
 
-    for(int i = 0; i < stack_depth; i++) {
-        born_wolf(i, psf_matrix, M_2PI/ex_wavelen, NA, refr_index, psf_size);
-        ++(*show_progress);
-    }
-//
-    show2DVec(psf_matrix);
+    // TODO(peo): integral Test Part
+//    integral_test(0, ori_vec, int_vec, 1000, 56);
+//    vtk_2Dplot_com(ori_vec, int_vec);
+    // integral TEST PART
+
+//    boost::progress_display *show_progress = NULL;
+//    show_progress = new boost::progress_display(stack_depth);
+
+//    for(int i = 0; i < stack_depth; i++) {
+    born_wolf_full(stack_depth*150, psf_matrix, M_2PI/ex_wavelen, NA, refr_index, psf_size);
+//        ++(*show_progress);
+//    }
     // show psf demon end
 
-//    std::vector<std::vector<std::vector<double> > > M3D;
-    std::vector<double> X, Y;
-//    mat3vector(compare_filename.c_str(), M3D);
-    for (int i = 0; i < psf_matrix[0].size(); i++) {
-        X.push_back((double)i);
-    }
-//    for (int j = 0; j < 256; ++j) {
-    vtk_2Dplot(X, psf_matrix[0]);
+//    std::vector<double> X;
+    std::vector<std::vector<double> > M2D;
+    mat2vector(compare_filename.c_str(), M2D, stack_depth);
+//    for (int i = 0; i < psf_matrix[0].size(); i++) {
+//        X.push_back((double)i);
 //    }
+
+//    for (int i = 0; i < M2D.size(); i++) {
+//        for (int j = 0; j < M2D[0].size(); j++) {
+//            std::cout << M2D[i][j] << "\t";
+//        }
+//        std::cout << std::endl;
+//    }
+    vtk_2Dplot_com(psf_matrix[127], M2D[127]);
+//    vtk_2Dplot(X, M2D[127]);
+    simple_show(psf_matrix);
+//    vtk_compare_linear(compare_filename.c_str(), psf_matrix[0], M2D[0]);
 
     return 0;
 }

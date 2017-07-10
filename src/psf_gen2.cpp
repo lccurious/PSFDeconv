@@ -38,10 +38,11 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
 {
     double const_ratio = k * NA / n_i * std::sqrt(x*x + y*y);
     double const_opd = -0.5 * k * z * NA*NA/n_i/n_i;
-
     std::complex<double>bess_sum(0.0, 0.0);
     double bess_tmp, v = 0.0;
-    int num_p = 10;
+    // 这是用于控制积分精度的，从0积到1这个数值越大，则积分精度越高
+    // 如果要追求绝对的精度的话，要做一个trade off，就是数值精度的问题
+    int num_p = 20;
     double delta_v = 1.0 / num_p;
     std::complex<double>opd(0.0, v);
 
@@ -51,8 +52,10 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
         for (int i = 0; i <= num_p; i++)
         {
             bess_tmp = boost::math::sph_bessel(0, v*const_ratio);
+
+            // TODO(peo):这里还会有大改动，可能计算过程出现失误
             opd.imag(v*v * const_opd);
-            bess_sum += bess_tmp * std::exp(opd) * v;
+            bess_sum += bess_tmp * std::exp(opd) * delta_v;
             v += delta_v;
         }
     }
@@ -61,39 +64,8 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
         std::cout <<  "Thrown exception " << ex.what() << std::endl;
     }
 
-    return std::abs(bess_sum);
+    return std::fabs(bess_sum);
 }
-
-/*
-double born_wol_acc(std::vector<int>z_stack ,
-                    std::vector<std::vector<std::vector<double> > >&M3D,
-                    double k, double NA, double n_i, int num_p)
-{
-    int step = 800 / num_p;
-    double bessel_res = 0.0, const_ratio;
-    // TODO(peo): Here using magic number for bessel integral accuracy indicator
-    double delta_v = 1.0 / 10;
-    double x, y;
-    std::vector<std::vector<std::vector<double> > >bess_tmp;
-    try {
-        for (int i = 0; i < num_p; i++) {
-            const_ratio.resize(num_p);
-            x = i*step;
-            for (int j = 0; j < num_p; i++) {
-                y = j*step;
-                const_ratio = k*NA / n_i * std::sqrt(x*x + y*y);
-                for (int v = 0; v < 10; v++) {
-                    bess_tmp[i][j].push_back(boost::math::sph_bessel(0, ));
-                }
-            }
-        }
-    }
-    catch (std::exception ex) {
-        std::cout << "Thrown exception: " << ex.what() << std::endl;
-    }
-
-}
- */
 
 int born_wolf(int z, std::vector<std::vector<double> >& M2D,
               double k, double NA, double n_i, int num_p)
@@ -110,6 +82,107 @@ int born_wolf(int z, std::vector<std::vector<double> >& M2D,
                 bessel_res = born_wolf_point(k, NA, n_i, j*step, i*step, z);
                 M2D[i][j] = bessel_res;
                 M2D[j][i] = bessel_res;
+            }
+        }
+    }
+    catch (std::exception ex)
+    {
+        std::cout << "Thrown exception : " << ex.what() << std::endl;
+    }
+    return 0;
+}
+
+int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
+                   double k, double NA, double n_i, int num_p)
+{
+    std::vector<std::vector<double> >M2D_cp(num_p);
+    double step = 10000 / num_p;
+    int num_2p = num_p*2-1;
+    double bessel_res = 0.0;
+    double max_pixel;
+    M2D.resize(num_p*2);
+    max_pixel = born_wolf_point(k, NA, n_i, 0, 0, z);
+    std::cout << "Max_pixel : " << max_pixel << std::endl;
+    try {
+        for (int i = 0; i < num_p; i++) {
+            M2D[i].resize(num_p*2);
+            M2D[i+num_p].resize(num_p*2);
+            M2D_cp[i].resize(num_p);
+            for (int j = 0; j <= i; j++) {
+                bessel_res = born_wolf_point(k, NA, n_i, j*step, i*step, z);
+                M2D_cp[i][j] = bessel_res / max_pixel;
+                M2D_cp[j][i] = bessel_res / max_pixel;
+            }
+        }
+        for (int i = 0; i < num_p; ++i) {
+            for (int j = 0; j < num_p; ++j) {
+                M2D[i+num_p][j+num_p] = M2D_cp[i][j];
+                M2D[num_p-i][j+num_p] = M2D_cp[i][j];
+                M2D[i+num_p][num_p-j] = M2D_cp[i][j];
+                M2D[num_p-i][num_p-j] = M2D_cp[i][j];
+            }
+        }
+    }
+    catch (std::exception ex)
+    {
+        std::cout << "Thrown exception : " << ex.what() << std::endl;
+    }
+    return 0;
+}
+
+int born_wolf_test(int z, std::vector<std::vector<double> >& M2D,
+                   double k, double NA, double n_i, int num_p)
+{
+    std::complex<double> test_a;
+    std::complex<double> test_res;
+    double delta_v = 1.0 / num_p;
+    double v = 0.0;
+    try {
+        for (int i = 0; i <= num_p; ++i) {
+            test_a.imag(v*2);
+            test_res = boost::math::sph_bessel(0, v) * exp(test_a);
+            std::cout <<"exp(J_0("<<v<<")) = "
+                      <<test_res
+                      <<"abs(test_res):\t"
+                      <<fabs(test_res)
+                      <<std::endl;
+            v += delta_v;
+        }
+    }
+    catch (std::exception ex)
+    {
+        std::cout << "Thrown exception : " << ex.what() << std::endl;
+    }
+
+    return 0;
+}
+
+int integral_test(int z,
+                  std::vector<double>& ori_vec,
+                  std::vector<double>& int_vec,
+                  int num_p,
+                  int xSize)
+{
+    std::complex<double> test_ori, test_res;
+    double delta_v = 10.0 / num_p;
+    double v = 0.0;
+    double bess_sum = 0., bess_tmp;
+    try {
+        test_ori.imag(0.);
+        test_ori.real(0.);
+        test_res.real(0.);
+        test_res.imag(0.);
+        for (int x = 0; x < xSize; ++x) {
+            bess_sum = 0.;
+            for (int i = 0; i <= num_p; ++i) {
+                test_ori.imag(v);
+                test_res = boost::math::sph_bessel(0, v) * exp(test_ori);
+                std::cout << test_res
+                          << std::endl;
+                v += delta_v;
+                bess_sum += bess_tmp * delta_v;
+                ori_vec.push_back(bess_tmp);
+                int_vec.push_back(bess_sum);
             }
         }
     }

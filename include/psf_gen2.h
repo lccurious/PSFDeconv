@@ -40,8 +40,24 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z);
 int born_wolf(int z, std::vector<std::vector<double> >& M2D,
               double k, double NA, double n_i, int num_p);
 
+/* 生成一个完整的点扩散函数的矩阵
+ */
+int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
+				   double k, double NA, double n_i, int num_p);
+
 int born_wolf_zstack(std::vector<int> zs,
                      std::vector<std::vector<std::vector<double> > >& M3D,
                      double k, double NA, double n_i, int num_p);
+
+/* Test function for bessel integral
+ */
+int born_wolf_test(int z, std::vector<std::vector<double> >& M2D,
+				   double k, double NA, double n_i, int num_p);
+
+int integral_test(int z,
+                  std::vector<double>& ori_vec,
+                  std::vector<double>& int_vec,
+                  int num_p,
+                  int xSize);
 
 #endif //PSF_GEN2_H

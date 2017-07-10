@@ -48,12 +48,40 @@ int cv_draw_pie(std::vector<double>amp)
     return 0;
 }
 
+int simple_show(const std::vector<std::vector<double> >&plane)
+{
+    if (plane.size() < 1) {
+        std::cout << "Plane size not legal" << std::endl;
+        return -1;
+    }
+    double max_pixel = plane[0][0];
+    unsigned long height, width;
+    height = plane.size();
+    width = plane[0].size();
+    cv::Mat img = cv::Mat::zeros(height, width, CV_8U);
+    uchar *p;
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < height; ++j) {
+            max_pixel = max_pixel < plane[i][j] ? plane[i][j] : max_pixel;
+        }
+    }
+    for (int i = 0; i < height; ++i) {
+        p = img.ptr<uchar>(i);
+        for (int j = 0; j < height; ++j) {
+            p[j] = plane[i][j] * 255 / max_pixel;
+        }
+    }
+    cv::imshow("Direct Matrix", img);
+    cv::waitKey(-1);
+    return 0;
+}
 
 int show2DVec(const std::vector<std::vector<double> >&plane)
 {
     if (plane.size() < 1)
     {
-        std::cout << "Plane size not leggal" << std::endl;
+        std::cout << "Plane size not legal" << std::endl;
+        return -1;
     }
     int width, height;
     height = plane.size();

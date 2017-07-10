@@ -32,5 +32,6 @@
  * 传入的都是双精度类型
  */
 int vtk_2Dplot(std::vector<double> X, std::vector<double>Y);
+int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2);
 
 #endif //PSF_VTKTOOLS_H

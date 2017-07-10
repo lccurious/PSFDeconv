@@ -43,17 +43,19 @@ int read_mat(const char* filename)
     return 0;
 }
 
-int mat2vector(const char *filename, std::vector<std::vector<double> >& M2D)
+int mat2vector(const char *filename, std::vector<std::vector<double> >& M2D,
+               int stack_seq)
 {
     mat_t *mat = Mat_Open(filename, MAT_ACC_RDONLY);
     unsigned int indice = 0;
     if (mat) {
-        std::cout << "mat open successfully" << std::endl;
 
         matvar_t *matVar = 0;
         // 验证常规级别的BW模型生成数据
-        matVar = Mat_VarRead(mat, (char*)"psf");
+        matVar = Mat_VarRead(mat, (char*)"psf_best");
         if (matVar) {
+            std::cout << "mat open successfully" << std::endl;
+            indice += matVar->dims[0]*matVar->dims[1]*stack_seq;
             const double *xData = static_cast<const double*>(matVar->data);
             if (matVar->rank == 3) {
                 // loop1: psf rows
@@ -103,6 +105,17 @@ int mat3vector(const char *filename,
         }
         std::cout<<"feed into vector finished" << std::endl;
         Mat_Close(mat);
+    }
+    return 0;
+}
+
+int vtk_compare_linear(const char *filename,
+                       std::vector<double> Y1,
+                       std::vector<double> Y2)
+{
+    assert(Y1.size() == Y2.size());
+    for (int i = 0; i < Y1.size(); ++i) {
+        std::cout << Y1[i] << "\t" << Y2[i] << std::endl;
     }
     return 0;
 }
