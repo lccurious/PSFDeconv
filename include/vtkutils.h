@@ -1,13 +1,11 @@
 //
-// Created by peo on 17-6-27.
+// Created by peo on 17-7-10.
 //
 
-#ifndef PSF_VTKTOOLS_H
-#define PSF_VTKTOOLS_H
+#ifndef PSF_VTKUTILS_H
+#define PSF_VTKUTILS_H
 
-/* make some visualization tools for data showing
- * Author: hzn
- */
+
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -34,4 +32,4 @@
 int vtk_2Dplot(std::vector<double> X, std::vector<double>Y);
 int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2);
 
-#endif //PSF_VTKTOOLS_H
+#endif //PSF_VTKUTILS_H

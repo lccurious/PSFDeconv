@@ -42,7 +42,7 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
     double bess_tmp, v = 0.0;
     // 这是用于控制积分精度的，从0积到1这个数值越大，则积分精度越高
     // 如果要追求绝对的精度的话，要做一个trade off，就是数值精度的问题
-    int num_p = 20;
+    int num_p = 60;
     double delta_v = 1.0 / num_p;
     std::complex<double>opd(0.0, v);
 
@@ -96,13 +96,15 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
                    double k, double NA, double n_i, int num_p)
 {
     std::vector<std::vector<double> >M2D_cp(num_p);
-    double step = 10000 / num_p;
+    double step = 30000 / num_p;
     int num_2p = num_p*2-1;
     double bessel_res = 0.0;
     double max_pixel;
     M2D.resize(num_p*2);
     max_pixel = born_wolf_point(k, NA, n_i, 0, 0, z);
+#ifdef _OBSERVE_MAX_PIXEL
     std::cout << "Max_pixel : " << max_pixel << std::endl;
+#endif
     try {
         for (int i = 0; i < num_p; i++) {
             M2D[i].resize(num_p*2);
@@ -110,8 +112,8 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
             M2D_cp[i].resize(num_p);
             for (int j = 0; j <= i; j++) {
                 bessel_res = born_wolf_point(k, NA, n_i, j*step, i*step, z);
-                M2D_cp[i][j] = bessel_res / max_pixel;
-                M2D_cp[j][i] = bessel_res / max_pixel;
+                M2D_cp[i][j] = bessel_res;
+                M2D_cp[j][i] = bessel_res;
             }
         }
         for (int i = 0; i < num_p; ++i) {
@@ -129,6 +131,21 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
     }
     return 0;
 }
+
+// TODO(peo): Here complete the PSF accelerate algorithm.
+//double born_wolf3D(double k, double NA, double refr_n, int psfSize, int stackSize)
+//{
+//    std::vector<std::vector<double> > baseM[psfSize];
+//    double const_ratio, const_opd;
+//    for (int x = 0; x < psfSize; ++x) {
+//        baseM[x].resize(psfSize);
+//        for (int y = 0; y < psfSize; ++y) {
+//            const_ratio = k*NA / refr_n*sqrt(x*x+y*y);
+//
+//        }
+//    }
+//    double const_ratio = k * NA / refr_n * sqrt(x*x + y*y);
+//}
 
 int born_wolf_test(int z, std::vector<std::vector<double> >& M2D,
                    double k, double NA, double n_i, int num_p)

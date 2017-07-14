@@ -1,12 +1,8 @@
 //
-// Created by peo on 17-6-27.
+// Created by peo on 17-7-10.
 //
 
-#include "vtkTools.h"
-
-/* make some visualization tools for data showing
- * Author: hzn
- */
+#include "vtkutils.h"
 
 int vtk_2Dplot(std::vector<double> X, std::vector<double> Y)
 {

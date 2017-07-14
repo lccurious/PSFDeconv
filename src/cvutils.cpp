@@ -1,8 +1,8 @@
 //
-// Created by peo on 17-6-27.
+// Created by peo on 17-7-10.
 //
 
-#include "cvTools.h"
+#include "cvutils.h"
 
 int cv_draw_pie(std::vector<double>amp)
 {
@@ -105,5 +105,37 @@ int show2DVec(const std::vector<std::vector<double> >&plane)
     cv::imshow("Complete PSF", img);
     cv::imwrite("images/_Complete PSF.png", img);
     cv::waitKey(-1);
+    return 0;
+}
+
+void vec2mat(std::vector<std::vector<double> > M2D, const cv::OutputArray out_im) {
+    double *ptr;
+    out_im.create(M2D.size(), M2D.size(), CV_64F);
+    for (int i = 0; i < M2D.size(); ++i) {
+        ptr = out_im.getMat().ptr<double>(i);
+        for (int j = 0; j < M2D[0].size(); ++j) {
+            ptr[j] = M2D[i][j];
+        }
+    }
+}
+
+int getTIFF(const char* filename, cv::OutputArray)
+{
+    TIFF* tif = TIFFOpen(filename, "r");
+
+    if (tif) {
+        tdata_t buf;
+        tstrile_t strip;
+
+        buf = _TIFFmalloc(TIFFStripSize(tif));
+        std::cout << "TIFF_BUFFER: " << buf << std::endl;
+        for (strip = 0; strip < TIFFNumberOfDirectories(tif); strip++) {
+            TIFFReadEncodedStrip(tif, strip, buf, (tsize_t) - 1);
+        }
+        _TIFFfree(buf);
+    }
+
+    TIFFClose(tif);
+
     return 0;
 }

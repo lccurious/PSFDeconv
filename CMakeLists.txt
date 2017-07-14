@@ -7,12 +7,17 @@ set(CMAKE_CXX_STANDARD 11)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin )
 set(SOURCE_FILES src/main.cpp
-        src/psf_gen2.cpp
-        src/cvTools.cpp
-		src/vtkTools.cpp
-		include/vtkTools.h
+		include/comparemat.h
 		src/comparemat.cpp
-		include/comparemat.h)
+		include/cvutils.h
+		src/cvutils.cpp
+		include/deconvpsf.h
+		src/deconvpsf.cpp
+		include/psf_gen2.h
+        src/psf_gen2.cpp
+		include/vtkutils.h
+		src/vtkutils.cpp
+		include/config.h)
 
 # BOOST LIB CONFIG
 set(Boost_USE_STATIC_LIBS ON)
@@ -34,7 +39,7 @@ include(${VTK_USE_FILE})
 if(Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})
 	add_executable( psf ${SOURCE_FILES} )
-	target_link_libraries( psf ${Boost_LIBRARIES} matio)
+	target_link_libraries( psf ${Boost_LIBRARIES} matio fftw3 tiff)
 #	add_executable( psf2Ddemo src/psfg.cpp
 #			src/psf_gen2.cpp
 #			src/cvTools.cpp)
