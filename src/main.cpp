@@ -36,6 +36,8 @@ int main(int argc, const char *argv[])
             ("stack_depth", opt::value<int>()->default_value(65))
             ("compare", opt::value<std::string>(),
             "file contain the ground truth data of BW model")
+            ("test_image", opt::value<std::string>(),
+            "read an image for test algorithm"),
             ("help", "produce help message")
     ;
     opt::variables_map vm;
@@ -67,11 +69,12 @@ int main(int argc, const char *argv[])
     double em_wavelen = vm["em_wavelen"].as<double>();
     double pinhole_radius = vm["pinhole_radius"].as<double>();
     std::string compare_filename = vm["compare"].as<std::string>();
+    std::string test_image_name = vm["test_image"].as<std::string>();
 
     if (vm.count("psf_size")) {
         psf_size = vm["psf_size"].as<int>();
         std::cout << "start generate "
-                  << psf_size << "x" << psf_size
+                  << psf_size*2 << "x" << psf_size*2
                   << " kernel" << std::endl;
     }
 
@@ -167,26 +170,72 @@ int main(int argc, const char *argv[])
 #define STACK_SIZE_RATIO 200
 #endif
 
-    cv::Mat in_image, out_image, psf_core;
-    in_image = cv::imread("images/sdaefawefawefceacaec.png", 0);
+    cv::Mat in_image, out_image, psf_core, psf_core_inv,complex_img, psf_show;
     std::vector<std::vector<double> > psf_matrix;
+
+    // prepare the psf core for convolution
     born_wolf_full((stack_depth-32)*STACK_SIZE_RATIO, psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
     psf_core.create(psf_matrix.size(), psf_matrix.size(), CV_64FC2);
-    std::cout << "PSF Size: " << psf_matrix.size()
-              << "\nCORE SIZE: " << psf_core.rows << "\t" << psf_core.cols
-              << std::endl;
     vec2mat(psf_matrix, psf_core);
-    in_image.convertTo(in_image, CV_64FC2);
-    std::cout << "transformed channel: " << in_image.channels() << std::endl;
-    cv::imshow("RAW_IMG", in_image);
-    convolutionDFT(in_image, psf_core, out_image);
-    cv::imshow("PSF_CORE", out_image);
+    cv::normalize(psf_core, psf_core, 255, 0);
+//    std::cout << psf_core << std::endl;
+//    std::cout << psf_core.inv() << std::endl;
+    cv::mulSpectrums(psf_core, psf_core.inv(), psf_core_inv, cv::DFT_COMPLEX_OUTPUT);
+    cv::resize(psf_core_inv, psf_show, cv::Size(512, 512));
+    cv::imshow("INV*PSF", psf_show);
     cv::waitKey(-1);
+
+    // Read raw TIFF format
+    int total_seq = TIFFframenumber(test_image_name.c_str());
+    int k = 0;
+    for (int i = 0; i < total_seq; ++i) {
+        getTIFF(test_image_name.c_str(), in_image, i);
+        in_image.copyTo(complex_img);
+
+        // prepare complex mat for frequency domain processing
+        complex_img.convertTo(complex_img, CV_64FC2);
+        psf_core.convertTo(psf_core, CV_64FC2);
+
+        // applying the PSF convolution operation
+        convolutionDFT(complex_img, psf_core.inv(), out_image);
+//        RichardLucydeconv(complex_img, psf_core, out_image);
+
+        // operation for exhibition
+        cv::normalize(in_image, in_image, 255, 0);
+        cv::resize(in_image, in_image, cv::Size(in_image.cols/2, in_image.rows/2), 0.5, 0.5);
+        cv::imshow("RAW_IMG", in_image);
+        cv::normalize(complex_img, complex_img, 255, 0);
+        cv::resize(complex_img, complex_img, cv::Size(complex_img.cols/2, complex_img.rows/2), 0.5, 0.5);
+        cv::imshow("COMPLEX_IMG", complex_img);
+        cv::normalize(out_image, out_image, 255, 0);
+        cv::resize(out_image, out_image, cv::Size(complex_img.cols, complex_img.rows), 0.5, 0.5);
+        cv::imshow("OUT_IMAGE", out_image);
+        cv::imshow("PSF_CORE", psf_show);
+        k = cv::waitKey(30);
+        if (k == 27) {
+            break;
+        }
+    }
 #endif
 
 #ifdef TIFF_READ_TEST
+    getTIFFinfo(test_image_name.c_str());
     cv::Mat TIFF_img;
-    getTIFF("/media/peo/Docunment/DeskTop/PSF/deconv/SmallFOV/Actin_CoverslipView.tif", TIFF_img);
+    int k = 0;
+    int TIFF_frame_num = TIFFframenumber(test_image_name.c_str());
+    for (int i = 0; i < TIFF_frame_num; ++i) {
+        getTIFF(test_image_name.c_str(), TIFF_img, i);
+        cv::normalize(TIFF_img, TIFF_img, 255, 0);
+        cv::putText(TIFF_img, std::to_string(i).c_str(), cv::Point(25, 55),
+                    cv::FONT_HERSHEY_DUPLEX, 2.0, CV_RGB(255, 255, 255), 2);
+        cv::resize(TIFF_img, TIFF_img, cv::Size(TIFF_img.cols/2, TIFF_img.rows/2),
+                   0.5, 0.5);
+        cv::imshow("TIFF Frame", TIFF_img);
+        k = cv::waitKey(25);
+        if (k == 27) {
+            break;
+        }
+    }
 #endif
 
     return 0;

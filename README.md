@@ -6,9 +6,11 @@
 - Boost >= 1.58
 - OpenCV >= 3.1.0
 - VTK >= 5.1
+- libtiff
 
 ## Build & Run
 ```
+cmake .
 make
 ./bin/psf
 ```

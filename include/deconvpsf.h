@@ -26,4 +26,7 @@ void iftplane(int squareSize,
 
 void convolutionDFT(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
 
+void RichardLucydeconv(cv::InputArray img,
+                       cv::InputArray core,
+                       cv::OutputArray out_img);
 #endif //PSF_DECONVPSF_H

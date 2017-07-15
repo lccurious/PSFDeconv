@@ -18,7 +18,6 @@ int vtk_2Dplot(std::vector<double> X, std::vector<double> Y)
     vtkSmartPointer<vtkDoubleArray> arrX =
             vtkSmartPointer<vtkDoubleArray>::New();
 
-    // TODO(peo):Modify into matplotlib style
     arrX->SetName("X Axis");
     table->AddColumn(arrX);
 
@@ -71,7 +70,6 @@ int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2)
     vtkSmartPointer<vtkDoubleArray> arrX =
             vtkSmartPointer<vtkDoubleArray>::New();
 
-    // TODO(peo):Modify into matplotlib style
     arrX->SetName("X Axis");
     table->AddColumn(arrX);
 

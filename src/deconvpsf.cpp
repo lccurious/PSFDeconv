@@ -125,6 +125,7 @@ void convolutionDFT(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     // A choice whether reallocate the output array
     C.create(abs(A.rows()-B.rows())+1, abs(A.cols() - B.cols())+1, A.type());
     cv::Size dftSize;
+
     // calculate the size of DFT transform
     dftSize.width = cv::getOptimalDFTSize(A.cols()+B.cols() - 1);
     dftSize.height = cv::getOptimalDFTSize(A.rows()+B.rows() - 1);
@@ -146,9 +147,24 @@ void convolutionDFT(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
 
     // multiply the spectrum
     // the function handles packed spectrum representations well
-    cv::mulSpectrums(tempA, tempB, tempA, 0);
+    cv::mulSpectrums(tempA, tempB, tempA, cv::DFT_COMPLEX_OUTPUT);
 
     cv::dft(tempA, tempA, cv::DFT_INVERSE + cv::DFT_SCALE, C.rows());
 
     tempA(cv::Rect(0, 0, C.cols(), C.rows())).copyTo(C);
+}
+
+void RichardLucydeconv(cv::InputArray img,
+                       cv::InputArray core,
+                       cv::OutputArray out_img)
+{
+    cv::Mat im_correction, im_new_est;
+    for (int i = 0; i < 10; ++i) {
+        cv::filter2D(img, out_img, img.depth(), core);
+        im_correction.create(out_img.size(), out_img.type());
+        cv::subtract(img, out_img, im_correction, 0);
+        im_new_est.create(out_img.size(), out_img.type());
+        cv::add(img, im_correction, im_new_est, 0);
+        im_new_est.copyTo(img.getMat());
+    }
 }

@@ -119,23 +119,74 @@ void vec2mat(std::vector<std::vector<double> > M2D, const cv::OutputArray out_im
     }
 }
 
-int getTIFF(const char* filename, cv::OutputArray)
+int getTIFFinfo(const char* filename)
 {
+    TIFF* tif = TIFFOpen(filename, "r");
+
+    if (tif) {
+        int width, height, blacklevel;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+        TIFFGetField(tif, TIFFTAG_BLACKLEVEL, &blacklevel);
+
+        std::cout << "TIFF_IMAGE info: "         << std::endl
+                  << "WIDTH: "      << width     << "\t"
+                  << "HEIGHT: "     << height    << std::endl
+                  << "BLACK_LEVEL: "<< blacklevel<< std::endl;
+        uint16 dircount = 0;
+        do {
+            dircount ++;
+        } while (TIFFReadDirectory(tif));
+        std::cout << "dircount: " << dircount << std::endl;
+        TIFFClose(tif);
+    }
+}
+
+int TIFFframenumber(const char* filename)
+{
+    TIFF* tif = TIFFOpen(filename, "r");
+    int num;
+    if (tif) {
+        num = TIFFNumberOfDirectories(tif);
+        TIFFClose(tif);
+        return num;
+    }
+    return 0;
+}
+
+int getTIFF(const char* filename, cv::OutputArray out_img, uint16 frame_seq)
+{
+    // Open figure
     TIFF* tif = TIFFOpen(filename, "r");
 
     if (tif) {
         tdata_t buf;
         tstrile_t strip;
 
-        buf = _TIFFmalloc(TIFFStripSize(tif));
-        std::cout << "TIFF_BUFFER: " << buf << std::endl;
-        for (strip = 0; strip < TIFFNumberOfDirectories(tif); strip++) {
-            TIFFReadEncodedStrip(tif, strip, buf, (tsize_t) - 1);
+        int width, height;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+
+        out_img.create(height, width, CV_32F);
+
+        uint16 bitspersample = 1;
+        uint16 samplesperpixel = 1;
+
+        TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &samplesperpixel);
+        TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bitspersample);
+
+        TIFFSetDirectory(tif, frame_seq);
+        buf = _TIFFmalloc(TIFFScanlineSize(tif));
+        float* ptr;
+        for (int row = 0; row < height; ++row) {
+            TIFFReadScanline(tif, buf, row);
+            ptr = out_img.getMat().ptr<float>(row);
+            for (int i = 0; i < width; ++i) {
+                ptr[i] = *((uint16*)buf+i);
+            }
         }
         _TIFFfree(buf);
     }
-
     TIFFClose(tif);
-
     return 0;
 }
