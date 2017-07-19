@@ -3,6 +3,9 @@
 //
 
 #include "cvutils.h"
+char *filename_TIFF;
+int alpha_slider;
+
 
 int cv_draw_pie(std::vector<double>amp)
 {
@@ -48,7 +51,7 @@ int cv_draw_pie(std::vector<double>amp)
     return 0;
 }
 
-int simple_show(const std::vector<std::vector<double> >&plane)
+int simple_show_vec(const std::vector<std::vector<double> >&plane)
 {
     if (plane.size() < 1) {
         std::cout << "Plane size not legal" << std::endl;
@@ -61,16 +64,13 @@ int simple_show(const std::vector<std::vector<double> >&plane)
     cv::Mat img = cv::Mat::zeros(height, width, CV_8U);
     uchar *p;
     for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < height; ++j) {
-            max_pixel = max_pixel < plane[i][j] ? plane[i][j] : max_pixel;
-        }
-    }
-    for (int i = 0; i < height; ++i) {
         p = img.ptr<uchar>(i);
         for (int j = 0; j < height; ++j) {
-            p[j] = plane[i][j] * 255 / max_pixel;
+            p[j] = plane[i][j];
         }
     }
+    cv::normalize(img, img, 255, 0);
+    cv::resize(img, img, cv::Size(512, 512));
     cv::imshow("Direct Matrix", img);
     cv::waitKey(-1);
     return 0;
@@ -161,13 +161,12 @@ int getTIFF(const char* filename, cv::OutputArray out_img, uint16 frame_seq)
 
     if (tif) {
         tdata_t buf;
-        tstrile_t strip;
 
         int width, height;
         TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
         TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
 
-        out_img.create(height, width, CV_32F);
+        out_img.create(height, width, CV_64F);
 
         uint16 bitspersample = 1;
         uint16 samplesperpixel = 1;
@@ -177,10 +176,10 @@ int getTIFF(const char* filename, cv::OutputArray out_img, uint16 frame_seq)
 
         TIFFSetDirectory(tif, frame_seq);
         buf = _TIFFmalloc(TIFFScanlineSize(tif));
-        float* ptr;
+        double* ptr;
         for (int row = 0; row < height; ++row) {
             TIFFReadScanline(tif, buf, row);
-            ptr = out_img.getMat().ptr<float>(row);
+            ptr = out_img.getMat().ptr<double>(row);
             for (int i = 0; i < width; ++i) {
                 ptr[i] = *((uint16*)buf+i);
             }
@@ -188,5 +187,53 @@ int getTIFF(const char* filename, cv::OutputArray out_img, uint16 frame_seq)
         _TIFFfree(buf);
     }
     TIFFClose(tif);
+    return 0;
+}
+
+int reconstructZY(const char* filename, cv::OutputArray out_img)
+{
+    TIFF *tif = TIFFOpen(filename, "r");
+    int num;
+    if (tif) {
+        tdata_t buf;
+        int width, height;
+        TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);
+        TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);
+
+        out_img.create(width, height, CV_64F);
+        buf = _TIFFmalloc(TIFFScanlineSize(tif));
+        double *ptr;
+
+        num = TIFFNumberOfDirectories(tif);
+        // TODO(peo): Add highgui slide bar
+        for (int i = 0; i < 0; ++i) {
+            for (int row = 0; row < height; ++row) {
+
+            }
+        }
+    }
+}
+
+static void on_trackbar(int , void*) {
+    cv::Mat image;
+    getTIFF(filename_TIFF, image, alpha_slider);
+    cv::normalize(image, image, 255, 0);
+    cv::imshow("NeuronXY", image);
+}
+
+int cv_slideWin(const char* filename)
+{
+    filename_TIFF = (char *) filename;
+    int alpha_slider_max = TIFFframenumber(filename_TIFF);
+    alpha_slider = 20;
+
+    cv::namedWindow("NeuronXY");
+    char TrackbarName[50];
+    sprintf(TrackbarName, "Slice x %d", alpha_slider_max);
+    cv::createTrackbar(TrackbarName, "NeuronXY", &alpha_slider, alpha_slider_max, on_trackbar);
+
+    on_trackbar(alpha_slider, 0);
+
+    cv::waitKey(0);
     return 0;
 }

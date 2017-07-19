@@ -9,8 +9,10 @@
 //#define PSF_DEMON
 //#define INTEGRAL_TEST
 //#define PSF_GEN_COMPARE
+//#define _PRINT_M2D
 //#define LOAD_TIFF_TEST
 #define DECONVOLUTION_TEST
 //#define TIFF_READ_TEST
+//#define TRACK_BAR_NEURON
 
 #endif //PSF_CONFIG_H

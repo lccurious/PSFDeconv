@@ -56,7 +56,8 @@ int vtk_2Dplot(std::vector<double> X, std::vector<double> Y)
     return EXIT_SUCCESS;
 }
 
-int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2)
+int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2,
+                   const char *strY1, const char *strY2)
 {
     if (Y2.size() != Y1.size())
     {
@@ -75,12 +76,12 @@ int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2)
 
     vtkSmartPointer<vtkDoubleArray> arrY1 =
             vtkSmartPointer<vtkDoubleArray>::New();
-    arrY1->SetName("Y1 Value");
+    arrY1->SetName(strY1);
     table->AddColumn(arrY1);
 
     vtkSmartPointer<vtkDoubleArray> arrY2 =
             vtkSmartPointer<vtkDoubleArray>::New();
-    arrY2->SetName("Y2 Value");
+    arrY2->SetName(strY2);
     table->AddColumn(arrY2);
 
     int num_point = Y1.size();
@@ -96,13 +97,14 @@ int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2)
     vtkSmartPointer<vtkContextView>view =
             vtkSmartPointer<vtkContextView>::New();
     view->GetRenderer()->SetBackground(1.0, 1.0, 1.0);
+    view->GetRenderWindow()->SetSize(800, 600);
 
     // Add line plots, setting the colors etc;
     vtkSmartPointer<vtkChartXY> chart =
             vtkSmartPointer<vtkChartXY>::New();
     view->GetScene()->AddItem(chart);
-    vtkPlot *line = chart->AddPlot(vtkChart::LINE);
 
+    vtkPlot *line = chart->AddPlot(vtkChart::LINE);
     line->SetInputData(table, 0, 1);
     line->SetColor(255, 0, 0, 255);
     line->SetWidth(2.0);
@@ -112,8 +114,21 @@ int vtk_2Dplot_com(std::vector<double> Y1, std::vector<double> Y2)
     line->SetColor(0, 0, 255, 255);
     line->SetWidth(2.0);
 
+    chart->SetShowLegend(true);
+
     view->GetInteractor()->Initialize();
     view->GetInteractor()->Start();
+
+    // Set up save options
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImageFilter =
+            vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImageFilter->SetInput(view->GetRenderWindow());
+    windowToImageFilter->Update();
+    vtkSmartPointer<vtkPNGWriter> writer =
+            vtkSmartPointer<vtkPNGWriter>::New();
+    writer->SetFileName("Compare Result.png");
+    writer->SetInputConnection(windowToImageFilter->GetOutputPort());
+    writer->Write();
 
     return EXIT_SUCCESS;
 }

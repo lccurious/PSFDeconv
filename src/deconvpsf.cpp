@@ -120,6 +120,41 @@ void iftplane(int squareSize,
     fftw_free(inB); fftw_free(outB);
 }
 
+int single_fft(cv::InputArray in_img, cv::OutputArray out_img)
+{
+    fftw_plan plan;
+    fftw_complex *inI, *outI;
+    int squareSize = in_img.cols() > in_img.rows() ? in_img.cols() : in_img.rows();
+    inI = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*squareSize*squareSize);
+    outI = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*squareSize*squareSize);
+
+    for (int i = 0; i < in_img.rows(); i++) {
+        for (int j = 0; j < in_img.cols(); j++) {
+             outI[i*in_img.rows()+j][0] = in_img.getMat().at<double>(i, j);
+             outI[i*in_img.rows()+j][1] = 0.0;
+        }
+    }
+
+    plan = fftw_plan_dft_2d(squareSize, squareSize, inI, outI, FFTW_FORWARD, FFTW_ESTIMATE);
+
+    fftw_execute(plan);
+
+    out_img.create(squareSize, squareSize, CV_64F);
+
+    for (int i = 0, k = 0; i < squareSize; i++) {
+        for (int j = 0; j < squareSize; j++) {
+            out_img.getMat().at<double>(i, j) = outI[k++][0];
+            std::cout << outI[k++][0];
+        }
+        std::cout << std::endl;
+    }
+
+    fftw_free(inI);
+    fftw_free(outI);
+
+    return 0;
+}
+
 void convolutionDFT(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
 {
     // A choice whether reallocate the output array
@@ -166,5 +201,198 @@ void RichardLucydeconv(cv::InputArray img,
         im_new_est.create(out_img.size(), out_img.type());
         cv::add(img, im_correction, im_new_est, 0);
         im_new_est.copyTo(img.getMat());
+    }
+}
+
+void fourier_show(cv::InputArray img)
+{
+    // padded the image for better fft processing
+    cv::Mat padded;
+    int opt_width = cv::getOptimalDFTSize(img.rows());
+    int opt_height = cv::getOptimalDFTSize(img.cols());
+    cv::copyMakeBorder(img, padded, 0, opt_width-img.rows(), 0, opt_height-img.cols(), cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    // DFT
+    cv::Mat planes[] = {cv::Mat_<double>(padded), cv::Mat::zeros(padded.size(), CV_64F)};
+    cv::Mat com_img;
+    cv::merge(planes, 2, com_img);
+    cv::dft(com_img, com_img);
+
+    // get DFT image
+    cv::split(com_img, planes);
+    cv::magnitude(planes[0], planes[1], planes[0]);
+
+    cv::Mat mag_mat = planes[0];
+    mag_mat += cv::Scalar::all(1);
+    cv::log(mag_mat, mag_mat);
+
+    // relocation quad image
+    mag_mat = mag_mat(cv::Rect(0, 0, mag_mat.cols & -2, mag_mat.rows & -2));
+    int cx = mag_mat.cols / 2;
+    int cy = mag_mat.rows / 2;
+
+    cv::Mat q0(mag_mat, cv::Rect(0, 0, cx, cy));
+    cv::Mat q1(mag_mat, cv::Rect(0, cy, cx, cy));
+    cv::Mat q2(mag_mat, cv::Rect(cx, cy, cx, cy));
+    cv::Mat q3(mag_mat, cv::Rect(cx, 0, cx, cy));
+
+    cv::Mat tmp;
+    q0.copyTo(tmp);
+    q2.copyTo(q0);
+    tmp.copyTo(q2);
+
+    q1.copyTo(tmp);
+    q3.copyTo(q1);
+    tmp.copyTo(q3);
+
+    // prepare for exhibition
+    cv::Mat mag_img(mag_mat);
+    cv::normalize(img.getMat(), img.getMat(), 255, 0);
+    cv::normalize(mag_img, mag_img, 255, 0);
+    cv::imshow("FOURIER", mag_img);
+    cv::imshow("RAW", img);
+}
+
+void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
+{
+    cv::Mat paddedA, paddedB, spectrumC;
+    cv::Mat matA, matB;
+    matA = A.getMat();matB = B.getMat();
+    int width = A.cols() > B.cols() ? A.cols() : B.cols();
+    int height = A.rows() > B.rows() ? A.rows() : B.rows();
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);
+    cv::copyMakeBorder(matA, paddedA, 0, opt_height-matA.rows, 0, opt_width-matA.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::copyMakeBorder(matB, paddedB, 0, opt_height-matB.rows, 0, opt_width-matB.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    // DFT
+    cv::Mat planesA[] = {cv::Mat_<double>(paddedA), cv::Mat::zeros(paddedA.size(), CV_64F)};
+    cv::Mat planesB[] = {cv::Mat_<double>(paddedB), cv::Mat::zeros(paddedB.size(), CV_64F)};
+    cv::Mat planesC[] = {cv::Mat::zeros(paddedB.size(), CV_64F), cv::Mat::zeros(paddedB.size(), CV_64F)};
+
+    cv::Mat com_A, com_B, com_C;
+    cv::merge(planesA, 2, com_A);
+    cv::merge(planesB, 2, com_B);
+    cv::dft(com_A, com_A);
+    cv::dft(com_B, com_B);
+
+    // get DFT image
+    cv::split(com_A, planesA);
+    cv::split(com_B, planesB);
+    cv::merge(planesC, 2, com_C);
+
+    divSpectrums(com_A, com_B, com_C, 0, 0);
+
+//    cv::dft(com_C, planesC[0], cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT, com_C.rows);
+    cv::dft(com_C, com_C, cv::DFT_INVERSE);
+    cv::split(com_C, planesC);
+    cv::magnitude(planesC[0], planesC[1], planesC[0]);
+    cv::normalize(planesC[0], planesC[0], 0, 1, CV_MINMAX);
+    planesC[0].copyTo(C);
+}
+
+static void divSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputArray _dst, int flags, bool conjB)
+{
+    cv::Mat srcA = _srcA.getMat(), srcB = _srcB.getMat();
+    int depth = srcA.depth(), cn = srcA.channels(), type = srcA.type();
+    int rows = srcA.rows, cols = srcA.cols;
+
+    CV_Assert( type == srcB.type() && srcA.size() == srcB.size() );
+    CV_Assert( type == CV_64FC1 || type == CV_64FC2);
+
+    _dst.create(srcA.rows, srcA.cols, type);
+    cv::Mat dst = _dst.getMat();
+
+    CV_Assert(dst.data != srcA.data); // non-inplace check
+    CV_Assert(dst.data != srcB.data); // non-inplace check
+
+    bool is_1d = (flags & cv::DFT_ROWS) || (rows == 1 || (cols == 1 &&
+            srcA.isContinuous() && srcB.isContinuous() && dst.isContinuous()));
+
+    if (is_1d && !(flags & cv::DFT_ROWS)) {
+        cols = cols + rows - 1, rows = 1;
+    }
+    int ncols = cols*cn;
+    int j0 = cn == 1;
+    int j1 = ncols - (cols % 2 == 0 && cn == 1);
+
+    if ( depth == CV_64F ) {
+        const double *dataA = srcA.ptr<double>();
+        const double *dataB = srcB.ptr<double>();
+        double *dataC = dst.ptr<double>();
+        double eps = DBL_EPSILON;
+
+        size_t stepA = srcA.step / sizeof(dataA[0]);
+        size_t stepB = srcB.step / sizeof(dataB[0]);
+        size_t stepC = dst.step / sizeof(dataC[0]);
+
+        if (!is_1d && cn == 1) {
+            // two channels real and image
+            for (int k = 0; k < (cols % 2 ? 1 : 2); k++) {
+                if (k == 1) {
+                    dataA += cols - 1, dataB += cols - 1, dataC += cols - 1;
+                }
+                dataC[0] = dataA[0] / (dataB[0] + eps);
+                if (rows % 2 == 0) {
+                    dataC[(rows - 1) * stepC] = dataA[(rows - 1) * stepA] / (dataB[(rows - 1) * stepB] + eps);
+                }
+                if (!conjB) {
+                    for (int j = 1; j <= rows - 2; j += 2) {
+                        double denom =
+                                dataB[j * stepB] * dataB[j * stepB] + dataB[(j + 1) * stepB] * dataB[(j + 1) * stepB] +
+                                eps;
+                        double re =
+                                dataA[j * stepA] * dataB[j * stepB] + dataA[(j + 1) * stepA] * dataB[(j + 1) * stepB];
+                        double im =
+                                dataA[(j + 1) * stepA] * dataB[j * stepB] - dataA[j * stepA] * dataB[(j + 1) * stepB];
+
+                        dataC[j * stepC] = (re / denom);
+                        dataC[(j + 1) * stepC] = (im / denom);
+                    }
+                } else {
+                    for (int j = 1; j <= rows - 2; j += 2) {
+                        double denom =
+                                dataB[j * stepB] * dataB[j * stepB] + dataB[(j + 1) * stepB] * dataB[(j + 1) * stepB] +
+                                eps;
+                        double re =
+                                dataA[j * stepA] * dataB[j * stepB] - dataA[(j + 1) * stepA] * dataB[(j + 1) * stepB];
+                        double im =
+                                dataA[(j + 1) * stepA] * dataB[j * stepB] + dataA[j * stepA] * dataB[(j + 1) * stepB];
+
+                        dataC[j * stepC] = re / denom;
+                        dataC[(j + 1) * stepC] = im / denom;
+                    }
+                }
+                if (k == 1) {
+                    dataA -= cols - 1, dataB -= cols - 1, dataC -= cols - 1;
+                }
+            }
+        }
+
+        for (; rows--; dataA += stepA, dataB += stepB, dataC += stepC) {
+            if (is_1d && cn == 1) {
+                dataC[0] = dataA[0] / (dataB[0] + eps);
+                if (cols % 2 == 0) {
+                    dataC[j1] = dataA[j1] / (dataB[j1] + eps);
+                }
+            }
+            if (!conjB) {
+                for (int j = 0; j < j1; j += 2) {
+                    double denom = dataB[j] * dataB[j] + dataB[j + 1] * dataB[j + 1] + eps;
+                    double re = dataA[j] * dataB[j] + dataA[j + 1] * dataB[j + 1];
+                    double im = dataA[j + 1] * dataB[j] * dataB[j] - dataA[j] * dataB[j + 1];
+                    dataC[j] = re / denom;
+                    dataC[j + 1] = im / denom;
+                }
+            } else {
+                for (int j = j0; j < j1; j += 2) {
+                    double denom = dataB[j] * dataB[j] + dataB[j + 1] * dataB[j + 1] + eps;
+                    double re = dataA[j] * dataB[j] - dataA[j + 1] * dataB[j + 1];
+                    double im = dataA[j + 1] * dataB[j] - dataA[j] * dataB[j + 1];
+                    dataC[j] = re / denom;
+                    dataC[j + 1] = im / denom;
+                }
+            }
+        }
     }
 }

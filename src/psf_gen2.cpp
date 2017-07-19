@@ -42,7 +42,7 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
     double bess_tmp, v = 0.0;
     // 这是用于控制积分精度的，从0积到1这个数值越大，则积分精度越高
     // 如果要追求绝对的精度的话，要做一个trade off，就是数值精度的问题
-    int num_p = 60;
+    int num_p = 1000;
     double delta_v = 1.0 / num_p;
     std::complex<double>opd(0.0, v);
 
@@ -96,12 +96,9 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
                    double k, double NA, double n_i, int num_p)
 {
     std::vector<std::vector<double> >M2D_cp(num_p);
-    double step = 30000 / num_p;
-    int num_2p = num_p*2-1;
+    double step = 7000 / num_p;
     double bessel_res = 0.0;
-    double max_pixel;
     M2D.resize(num_p*2);
-    max_pixel = born_wolf_point(k, NA, n_i, 0, 0, z);
 #ifdef _OBSERVE_MAX_PIXEL
     std::cout << "Max_pixel : " << max_pixel << std::endl;
 #endif
@@ -119,9 +116,9 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
         for (int i = 0; i < num_p; ++i) {
             for (int j = 0; j < num_p; ++j) {
                 M2D[i+num_p][j+num_p] = M2D_cp[i][j];
-                M2D[num_p-i][j+num_p] = M2D_cp[i][j];
-                M2D[i+num_p][num_p-j] = M2D_cp[i][j];
-                M2D[num_p-i][num_p-j] = M2D_cp[i][j];
+                M2D[num_p-i-1][j+num_p] = M2D_cp[i][j];
+                M2D[i+num_p][num_p-j-1] = M2D_cp[i][j];
+                M2D[num_p-i-1][num_p-j-1] = M2D_cp[i][j];
             }
         }
     }

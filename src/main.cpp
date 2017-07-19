@@ -37,19 +37,15 @@ int main(int argc, const char *argv[])
             ("compare", opt::value<std::string>(),
             "file contain the ground truth data of BW model")
             ("test_image", opt::value<std::string>(),
-            "read an image for test algorithm"),
+            "read an image for test algorithm")
             ("help", "produce help message")
     ;
     opt::variables_map vm;
-    if (vm.count("help")) {
-        std::cout << desc << std::endl;
-        return 1;
-    }
 
     // read parameter from file
     try {
         opt::store(
-                opt::parse_config_file<char>("psf.cfg", desc),
+                opt::parse_config_file<char>("/media/peo/Curious/Visual/deconv/deconv_open/psf.cfg", desc),
                 vm
         );
     } catch (const opt::reading_file& e) {
@@ -58,6 +54,10 @@ int main(int argc, const char *argv[])
     }
     // 解析命令行选项并把值存储到'vm'
     opt::store(opt::parse_command_line(argc, argv, desc), vm);
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;
+        return 1;
+    }
     opt::notify(vm);
 
     // the width and height of psf
@@ -101,7 +101,7 @@ int main(int argc, const char *argv[])
 #ifdef PSF_GEN_COMPARE
     std::vector<double> X;
     std::vector<std::vector<double> > M2D;
-    born_wolf_full((stack_depth-32)*270, psf_matrix, M_2PI/em_wavelen, NA, refr_index, psf_size);
+    born_wolf_full((stack_depth-32)*1000, psf_matrix, M_2PI/em_wavelen, NA, refr_index, psf_size);
     mat2vector(compare_filename.c_str(), M2D, stack_depth);
     for (int i = 0; i < psf_matrix[0].size(); i++) {
         X.push_back((double)i);
@@ -116,9 +116,9 @@ int main(int argc, const char *argv[])
     }
 #endif
 
-    vtk_2Dplot_com(psf_matrix[127], M2D[127]);
+    vtk_2Dplot_com(psf_matrix[127], M2D[127], "Local", "ImageJ");
 //    vtk_2Dplot(X, M2D[127]);
-//    simple_show(psf_matrix);
+    simple_show_vec(psf_matrix);
 #endif // PSF_GEN_COMPARE
 
 #ifdef DFT_TEST
@@ -175,43 +175,36 @@ int main(int argc, const char *argv[])
 
     // prepare the psf core for convolution
     born_wolf_full((stack_depth-32)*STACK_SIZE_RATIO, psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
-    psf_core.create(psf_matrix.size(), psf_matrix.size(), CV_64FC2);
+    psf_core.create(psf_matrix.size(), psf_matrix.size(), CV_64F);
     vec2mat(psf_matrix, psf_core);
-    cv::normalize(psf_core, psf_core, 255, 0);
-//    std::cout << psf_core << std::endl;
-//    std::cout << psf_core.inv() << std::endl;
-    cv::mulSpectrums(psf_core, psf_core.inv(), psf_core_inv, cv::DFT_COMPLEX_OUTPUT);
-    cv::resize(psf_core_inv, psf_show, cv::Size(512, 512));
-    cv::imshow("INV*PSF", psf_show);
-    cv::waitKey(-1);
 
-    // Read raw TIFF format
+    cv::normalize(psf_core, psf_core, 0, 1, CV_MINMAX);
+    cv::resize(psf_core, psf_show, cv::Size(512, 512));
+//
+//     Read raw TIFF format
     int total_seq = TIFFframenumber(test_image_name.c_str());
+    getTIFF(test_image_name.c_str(), in_image, 0);
+    int width = in_image.cols, height = in_image.rows;
+    while (width > 1000 || height > 1000) {
+        width >>= 1;
+        height >>= 1;
+    }
     int k = 0;
     for (int i = 0; i < total_seq; ++i) {
         getTIFF(test_image_name.c_str(), in_image, i);
-        in_image.copyTo(complex_img);
-
-        // prepare complex mat for frequency domain processing
-        complex_img.convertTo(complex_img, CV_64FC2);
-        psf_core.convertTo(psf_core, CV_64FC2);
 
         // applying the PSF convolution operation
-        convolutionDFT(complex_img, psf_core.inv(), out_image);
-//        RichardLucydeconv(complex_img, psf_core, out_image);
+        // TODO(peo):checkout the fourier transform
+        multiply_fourier(in_image, psf_core, out_image);
 
         // operation for exhibition
-        cv::normalize(in_image, in_image, 255, 0);
-        cv::resize(in_image, in_image, cv::Size(in_image.cols/2, in_image.rows/2), 0.5, 0.5);
-        cv::imshow("RAW_IMG", in_image);
-        cv::normalize(complex_img, complex_img, 255, 0);
-        cv::resize(complex_img, complex_img, cv::Size(complex_img.cols/2, complex_img.rows/2), 0.5, 0.5);
-        cv::imshow("COMPLEX_IMG", complex_img);
-        cv::normalize(out_image, out_image, 255, 0);
-        cv::resize(out_image, out_image, cv::Size(complex_img.cols, complex_img.rows), 0.5, 0.5);
-        cv::imshow("OUT_IMAGE", out_image);
-        cv::imshow("PSF_CORE", psf_show);
-        k = cv::waitKey(30);
+        cv::normalize(in_image, in_image, 0, 1, CV_MINMAX);
+        cv::resize(in_image, in_image, cv::Size(width, height));
+        cv::resize(out_image, out_image, cv::Size(width, height));
+        cv::imshow("RAW", in_image);
+        cv::imshow("PSF", psf_show);
+        cv::imshow("DE", out_image);
+        k = cv::waitKey(60);
         if (k == 27) {
             break;
         }
@@ -236,6 +229,10 @@ int main(int argc, const char *argv[])
             break;
         }
     }
+#endif
+
+#ifdef TRACK_BAR_NEURON
+    cv_slideWin(test_image_name.c_str());
 #endif
 
     return 0;
