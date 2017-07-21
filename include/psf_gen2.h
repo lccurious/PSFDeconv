@@ -15,6 +15,7 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/progress.hpp>
 
+extern int AiryRadius;
 
 typedef boost::multiprecision::cpp_dec_float_50 float_type;
 
@@ -54,6 +55,15 @@ int born_wolf_zstack(std::vector<int> zs,
 int born_wolf_test(int z, std::vector<std::vector<double> >& M2D,
 				   double k, double NA, double n_i, int num_p);
 
+/**!
+ * only for test the integral operation.
+ * @param z the value in z axial
+ * @param ori_vec original vector
+ * @param int_vec
+ * @param num_p
+ * @param xSize
+ * @return
+ */
 int integral_test(int z,
                   std::vector<double>& ori_vec,
                   std::vector<double>& int_vec,

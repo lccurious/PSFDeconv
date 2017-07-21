@@ -193,15 +193,80 @@ void RichardLucydeconv(cv::InputArray img,
                        cv::InputArray core,
                        cv::OutputArray out_img)
 {
-    cv::Mat im_correction, im_new_est;
-    for (int i = 0; i < 10; ++i) {
-        cv::filter2D(img, out_img, img.depth(), core);
-        im_correction.create(out_img.size(), out_img.type());
-        cv::subtract(img, out_img, im_correction, 0);
-        im_new_est.create(out_img.size(), out_img.type());
-        cv::add(img, im_correction, im_new_est, 0);
-        im_new_est.copyTo(img.getMat());
+    cv::Mat im_correction, im_new_est, in_padded, core_padded, adj_padded;
+    cv::Mat in_img = img.getMat(), core_img = core.getMat();
+    cv::Mat in_complex, core_complex, core_adj, adj_complex, norm_img;
+    im_new_est = in_img.clone();
+
+    // padded the image for better fft performance
+    int width = img.cols() > core.cols() ? img.cols() : core.cols();
+    int height = img.rows() > core.rows() ? img.rows() : core.rows();
+
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);
+
+    // padded raw image dosen't hurt image performance
+    cv::copyMakeBorder(core_img, core_padded, 0, opt_height-core.rows(), 0, opt_width-core.cols(), cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::copyMakeBorder(core_adj, adj_padded, 0, opt_height-core_adj.rows, 0, opt_width-core_adj.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    // get PSF adj core calculate only once.
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> core_eigen;
+    cv::cv2eigen(core_img, core_eigen);
+    core_eigen.adjointInPlace();
+    cv::eigen2cv(core_eigen, core_adj);
+
+    // PSF core padded for computation
+    cv::Mat core_planes[] = {cv::Mat_<double>(core_padded), cv::Mat::zeros(core_padded.size(), CV_64F)};
+    // PSF core adjoint image plane
+    cv::Mat adj_planes[] = {cv::Mat_<double>(adj_padded), cv::Mat::zeros(core_padded.size(), CV_64F)};
+    // correlationship image plane
+    cv::Mat corr_planes[] = {cv::Mat_<double>(in_padded), cv::Mat::zeros(core_padded.size(), CV_64F)};
+    cv::Mat in_planes[] = {cv::Mat_<double>(in_padded), cv::Mat::zeros(in_padded.size(), CV_64F)};
+
+    cv::merge(core_planes, 2, core_complex);
+    cv::merge(adj_planes, 2, adj_complex);
+    cv::dft(core_complex, core_complex, cv::DFT_COMPLEX_OUTPUT);
+    cv::dft(adj_complex, adj_complex, cv::DFT_COMPLEX_OUTPUT);
+    cv::Rect rect_in = cv::Rect(0, 0, img.cols(), img.rows());
+
+    for (int i = 0; i < 5; i++) {
+
+        // Loop begin
+        // Replace the original data
+        cv::copyMakeBorder(im_new_est, in_padded, 0, opt_height-img.rows(), 0, opt_width-img.cols(), cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+        in_planes[0] = in_padded;
+        in_planes[1] = cv::Mat::zeros(in_padded.size(), CV_64F);
+
+        // compute the DFT transform
+        cv::merge(in_planes, 2, in_complex);
+        cv::dft(in_complex, in_complex, cv::DFT_COMPLEX_OUTPUT);
+        cv::mulSpectrums(in_complex, core_complex, in_complex, cv::DFT_COMPLEX_OUTPUT);
+
+        // get inverse DFT transform
+        cv::idft(in_complex, in_complex);
+        cv::split(in_complex, corr_planes);
+        cv::magnitude(corr_planes[0], corr_planes[1], corr_planes[0]);
+        corr_planes[0](rect_in).copyTo(im_correction);
+        cv::divide(in_img, im_correction, im_correction);
+
+        cv::copyMakeBorder(im_correction, in_padded, 0, opt_height-img.rows(), 0, opt_width-img.cols(), cv::BORDER_CONSTANT, cv::Scalar::all(0));
+        in_planes[0] = in_padded;
+        in_planes[1] = cv::Mat::zeros(in_padded.size(), CV_64F);
+        cv::merge(in_planes, 2, in_complex);
+        cv::dft(in_complex, in_complex);
+        cv::mulSpectrums(adj_complex, in_complex, in_complex, cv::DFT_COMPLEX_OUTPUT);
+        cv::idft(in_complex, in_complex);
+        cv::split(in_complex, corr_planes);
+        cv::magnitude(corr_planes[0], corr_planes[1], corr_planes[0]);
+        corr_planes[0](rect_in).copyTo(im_correction);
+        cv::multiply(im_new_est, im_correction, im_new_est);
+        im_new_est.copyTo(norm_img);
+//        std::cout << "turn: " << i << std::endl;
     }
+    // compute the convolution in frequency domain:denom
+    cv::normalize(norm_img, norm_img, 0, 1, CV_MINMAX);
+    norm_img.copyTo(out_img);
 }
 
 void fourier_show(cv::InputArray img)
@@ -284,6 +349,43 @@ void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     divSpectrums(com_A, com_B, com_C, 0, 0);
 
 //    cv::dft(com_C, planesC[0], cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT, com_C.rows);
+    cv::dft(com_C, com_C, cv::DFT_INVERSE);
+    cv::split(com_C, planesC);
+    cv::magnitude(planesC[0], planesC[1], planesC[0]);
+    cv::normalize(planesC[0], planesC[0], 0, 1, CV_MINMAX);
+    planesC[0].copyTo(C);
+}
+
+void divide_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
+{
+    cv::Mat paddedA, paddedB, spectrumC;
+    cv::Mat matA, matB;
+    matA = A.getMat();matB = B.getMat();
+    int width = A.cols() > B.cols() ? A.cols() : B.cols();
+    int height = A.rows() > B.rows() ? A.rows() : B.rows();
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);
+    cv::copyMakeBorder(matA, paddedA, 0, opt_height-matA.rows, 0, opt_width-matA.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::copyMakeBorder(matB, paddedB, 0, opt_height-matB.rows, 0, opt_width-matB.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    // DFT
+    cv::Mat planesA[] = {cv::Mat_<double>(paddedA), cv::Mat::zeros(paddedA.size(), CV_64F)};
+    cv::Mat planesB[] = {cv::Mat_<double>(paddedB), cv::Mat::zeros(paddedB.size(), CV_64F)};
+    cv::Mat planesC[] = {cv::Mat::zeros(paddedB.size(), CV_64F), cv::Mat::zeros(paddedB.size(), CV_64F)};
+
+    cv::Mat com_A, com_B, com_C;
+    cv::merge(planesA, 2, com_A);
+    cv::merge(planesB, 2, com_B);
+    cv::dft(com_A, com_A);
+    cv::dft(com_B, com_B);
+
+    // get DFT image
+    cv::split(com_A, planesA);
+    cv::split(com_B, planesB);
+    cv::merge(planesC, 2, com_C);
+
+    divSpectrums(com_A, com_B, com_C, 0, 0);
+
     cv::dft(com_C, com_C, cv::DFT_INVERSE);
     cv::split(com_C, planesC);
     cv::magnitude(planesC[0], planesC[1], planesC[0]);

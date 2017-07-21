@@ -18,6 +18,8 @@
 
 namespace opt = boost::program_options;
 
+int AiryRadius;
+
 int main(int argc, const char *argv[])
 {
     opt::options_description desc("All options");
@@ -38,6 +40,9 @@ int main(int argc, const char *argv[])
             "file contain the ground truth data of BW model")
             ("test_image", opt::value<std::string>(),
             "read an image for test algorithm")
+            ("logs", opt::value<std::string>()->default_value("logs"),
+            "directory for storing generate images")
+            ("AiryRadius", opt::value<int>()->default_value(1000))
             ("help", "produce help message")
     ;
     opt::variables_map vm;
@@ -68,6 +73,7 @@ int main(int argc, const char *argv[])
     double ex_wavelen = vm["ex_wavelen"].as<double>();
     double em_wavelen = vm["em_wavelen"].as<double>();
     double pinhole_radius = vm["pinhole_radius"].as<double>();
+    AiryRadius = vm["AiryRadius"].as<int>();
     std::string compare_filename = vm["compare"].as<std::string>();
     std::string test_image_name = vm["test_image"].as<std::string>();
 
@@ -77,6 +83,8 @@ int main(int argc, const char *argv[])
                   << psf_size*2 << "x" << psf_size*2
                   << " kernel" << std::endl;
     }
+
+
 
 #if defined(PSF_DEMON) || defined(INTEGRAL_TEST) || defined(PSF_GEN_COMPARE)// show psf demon
     std::vector<std::vector<double> > psf_matrix;
@@ -177,11 +185,10 @@ int main(int argc, const char *argv[])
     born_wolf_full((stack_depth-32)*STACK_SIZE_RATIO, psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
     psf_core.create(psf_matrix.size(), psf_matrix.size(), CV_64F);
     vec2mat(psf_matrix, psf_core);
-
-    cv::normalize(psf_core, psf_core, 0, 1, CV_MINMAX);
+//    cv::normalize(psf_core, psf_core, 0, 1, CV_MINMAX);
     cv::resize(psf_core, psf_show, cv::Size(512, 512));
-//
-//     Read raw TIFF format
+
+    // Read raw TIFF format
     int total_seq = TIFFframenumber(test_image_name.c_str());
     getTIFF(test_image_name.c_str(), in_image, 0);
     int width = in_image.cols, height = in_image.rows;
@@ -190,12 +197,14 @@ int main(int argc, const char *argv[])
         height >>= 1;
     }
     int k = 0;
+    char image_name[50];
     for (int i = 0; i < total_seq; ++i) {
         getTIFF(test_image_name.c_str(), in_image, i);
 
         // applying the PSF convolution operation
-        // TODO(peo):checkout the fourier transform
-        multiply_fourier(in_image, psf_core, out_image);
+        // TODO(peo):Set up denoise mechanism
+        // divide_fourier(in_image, psf_core, out_image);
+        RichardLucydeconv(in_image.clone(), psf_core, out_image);
 
         // operation for exhibition
         cv::normalize(in_image, in_image, 0, 1, CV_MINMAX);
@@ -207,6 +216,12 @@ int main(int argc, const char *argv[])
         k = cv::waitKey(60);
         if (k == 27) {
             break;
+        }
+        if (k == ' ') {
+            std::sprintf(image_name, "logs/tmep_%d.png", i);
+            out_image *= 255;
+            out_image.convertTo(out_image, CV_8UC1);
+            cv::imwrite(image_name, out_image);
         }
     }
 #endif
