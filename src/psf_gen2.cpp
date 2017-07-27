@@ -42,7 +42,7 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
     double bess_tmp, v = 0.0;
     // 这是用于控制积分精度的，从0积到1这个数值越大，则积分精度越高
     // 如果要追求绝对的精度的话，要做一个trade off，就是数值精度的问题
-    int num_p = 1000;
+    int num_p = 10000;
     double delta_v = 1.0 / num_p;
     std::complex<double>opd(0.0, v);
 
@@ -63,8 +63,7 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z)
     {
         std::cout <<  "Thrown exception " << ex.what() << std::endl;
     }
-
-    return std::fabs(bess_sum);
+    return std::pow(1.0*std::fabs(bess_sum), 2);
 }
 
 int born_wolf(int z, std::vector<std::vector<double> >& M2D,
@@ -98,6 +97,7 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
     std::vector<std::vector<double> >M2D_cp(num_p);
     double step = AiryRadius / num_p;
     double bessel_res = 0.0;
+    z*=step;
     M2D.resize(num_p*2);
 #ifdef _OBSERVE_MAX_PIXEL
     std::cout << "Max_pixel : " << max_pixel << std::endl;
@@ -207,6 +207,7 @@ int integral_test(int z,
     return 0;
 }
 
+// TODO: To be finished.
 int born_wolf_zstack(std::vector<int> zs,
                      std::vector<std::vector<std::vector<double> > >& M3D,
                      double k, double NA, double n_i, int num_p)

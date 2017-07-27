@@ -28,7 +28,7 @@ int main(int argc, const char *argv[])
             "the size of PSF kernel")
             ("deconvolution,d", opt::value<std::string>(),
             "the full path of file")
-            ("test", opt::value<int>()->default_value(65),
+            ("test", opt::value<int>()->default_value(32),
              "test the psf generate cost")
             ("ex_wavelen", opt::value<double>()->default_value(488.0))
             ("em_wavelen", opt::value<double>()->default_value(520.0))
@@ -57,8 +57,10 @@ int main(int argc, const char *argv[])
         std::cout << "Failed to open file 'psf.cfg': "
                   << e.what() << std::endl;
     }
+
     // 解析命令行选项并把值存储到'vm'
-    opt::store(opt::parse_command_line(argc, argv, desc), vm);
+    opt::store(opt::parse_command_line(argc, argv, desc), vm, true);
+
     if (vm.count("help")) {
         std::cout << desc << std::endl;
         return 1;
@@ -66,7 +68,7 @@ int main(int argc, const char *argv[])
     opt::notify(vm);
 
     // the width and height of psf
-    int psf_size;
+    int psf_size = vm["psf_size"].as<int>();;
     int stack_depth = vm["stack_depth"].as<int>();
     double NA = vm["NA"].as<double>();
     double refr_index = vm["refr_index"].as<double>();
@@ -109,7 +111,8 @@ int main(int argc, const char *argv[])
 #ifdef PSF_GEN_COMPARE
     std::vector<double> X;
     std::vector<std::vector<double> > M2D;
-    born_wolf_full((stack_depth-32)*1000, psf_matrix, M_2PI/em_wavelen, NA, refr_index, psf_size);
+    int step = AiryRadius / psf_size;
+    born_wolf_full((stack_depth-32)*step, psf_matrix, M_2PI/em_wavelen, NA, refr_index, psf_size);
     mat2vector(compare_filename.c_str(), M2D, stack_depth);
     for (int i = 0; i < psf_matrix[0].size(); i++) {
         X.push_back((double)i);
@@ -173,7 +176,6 @@ int main(int argc, const char *argv[])
 #endif
 
 #ifdef DECONVOLUTION_TEST
-
 #ifndef STACK_SIZE_RATIO
 #define STACK_SIZE_RATIO 200
 #endif
@@ -182,29 +184,34 @@ int main(int argc, const char *argv[])
     std::vector<std::vector<double> > psf_matrix;
 
     // prepare the psf core for convolution
-    born_wolf_full((stack_depth-32)*STACK_SIZE_RATIO, psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
+    born_wolf_full((stack_depth-32), psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
     psf_core.create(psf_matrix.size(), psf_matrix.size(), CV_64F);
     vec2mat(psf_matrix, psf_core);
-//    cv::normalize(psf_core, psf_core, 0, 1, CV_MINMAX);
+    cv::normalize(psf_core, psf_core, 0, 1, CV_MINMAX);
     cv::resize(psf_core, psf_show, cv::Size(512, 512));
 
     // Read raw TIFF format
     int total_seq = TIFFframenumber(test_image_name.c_str());
     getTIFF(test_image_name.c_str(), in_image, 0);
     int width = in_image.cols, height = in_image.rows;
+
+    // for fitting the screen size
     while (width > 1000 || height > 1000) {
         width >>= 1;
         height >>= 1;
     }
     int k = 0;
     char image_name[50];
+    boost::progress_display *show_progress = NULL;
+    show_progress = new boost::progress_display(total_seq);
     for (int i = 0; i < total_seq; ++i) {
         getTIFF(test_image_name.c_str(), in_image, i);
 
         // applying the PSF convolution operation
         // TODO(peo):Set up denoise mechanism
-        // divide_fourier(in_image, psf_core, out_image);
-        RichardLucydeconv(in_image.clone(), psf_core, out_image);
+//         divide_fourier(in_image, psf_core, out_image);
+//        RichardLucydeconv(in_image.clone(), psf_core, out_image);
+        RichardLucy(in_image.clone(), psf_core.clone(), out_image);
 
         // operation for exhibition
         cv::normalize(in_image, in_image, 0, 1, CV_MINMAX);
@@ -215,14 +222,16 @@ int main(int argc, const char *argv[])
         cv::imshow("DE", out_image);
         k = cv::waitKey(60);
         if (k == 27) {
+            std::cout << std::endl;
             break;
         }
         if (k == ' ') {
-            std::sprintf(image_name, "logs/tmep_%d.png", i);
+            std::sprintf(image_name, "logs/Ricard-Lucy_%d.png", i);
             out_image *= 255;
             out_image.convertTo(out_image, CV_8UC1);
             cv::imwrite(image_name, out_image);
         }
+        ++(*show_progress);
     }
 #endif
 
@@ -248,6 +257,73 @@ int main(int argc, const char *argv[])
 
 #ifdef TRACK_BAR_NEURON
     cv_slideWin(test_image_name.c_str());
+#endif
+
+#ifdef PSF_STACK_VIEW
+    cv::Mat psf_core, stack_view;
+    std::vector<std::vector<double> > psf_matrix;
+    double step = AiryRadius / psf_size;
+    double bessel_res = 0.0;
+    stack_view.create(psf_size*2, 64, CV_64F);
+    for (int i = 0; i < 64; i++) {
+        for (int j = 0; j < psf_size; j++) {
+            bessel_res = born_wolf_point(M_2PI/em_wavelen, NA, refr_index, j*step, 0, (i-32)*step);
+            stack_view.at<double>(psf_size-j, i) = bessel_res;
+            stack_view.at<double>(psf_size+j, i) = bessel_res;
+        }
+    }
+    cv::normalize(stack_view, stack_view, 0, 1, CV_MINMAX);
+    stack_view *= 255;
+    stack_view.convertTo(stack_view, CV_8UC1);
+    cv::resize(stack_view, stack_view, stack_view.size()*2);
+    cv::imwrite("logs/psf_stack.png", stack_view);
+    cv::imshow("PSF_STACK", stack_view);
+    cv::waitKey(-1);
+#endif
+
+#ifdef RLAL_TEST
+    cv::Mat in_image, out_image, psf_core;
+    cv::Mat in_show, out_show, frame, im_gray;
+    std::vector<std::vector<double> > psf_matrix;
+
+    born_wolf_full((stack_depth-32), psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
+    psf_core.create((int)psf_matrix.size(), (int)psf_matrix.size(), CV_64F);
+    vec2mat(psf_matrix, psf_core);
+    double core_sum = cv::sum(psf_core)[0];
+    psf_core /= core_sum;
+
+    cv::VideoCapture cap = cv::VideoCapture("/media/peo/Docunment/视频/vlc-record-2017-05-27-19h49m41s-DJI_0012.MP4-.mp4");
+
+    int k, count = (int)cap.get(cv::CAP_PROP_FRAME_COUNT);
+    cap >> in_image;
+    count --;
+    int width = in_image.cols, height = in_image.rows;
+
+    // for fitting the screen size
+    while (width > 1000 || height > 1000) {
+        width >>= 2;
+        height >>= 2;
+    }
+
+    // main loop begin
+    for(int i = 0; i < count; i++) {
+        cap >> frame;
+        cv::cvtColor(frame, im_gray, cv::COLOR_BGR2GRAY);
+        cv::resize(im_gray, im_gray, cv::Size(width, height));
+        multiply_fourier(im_gray, psf_core, in_image);
+
+        // TODO(peo):substitute the function.
+        // RichardLucy(in_image, psf_core, out_image);
+
+        divide_fourier(in_image, psf_core, out_image);
+        cv::imshow("CONV", in_image);
+        cv::imshow("DE", out_image);
+        k = cv::waitKey(1);
+        if (k == 27) {
+            break;
+        }
+    } // main loop end
+    cap.release();
 #endif
 
     return 0;

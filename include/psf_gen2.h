@@ -41,7 +41,15 @@ double born_wolf_point(double k, double NA, double n_i, int x, int y, int z);
 int born_wolf(int z, std::vector<std::vector<double> >& M2D,
               double k, double NA, double n_i, int num_p);
 
-/* 生成一个完整的点扩散函数的矩阵
+/**
+ * build an complete PSF plane for a given z
+ * @param z
+ * @param M2D
+ * @param k
+ * @param NA
+ * @param n_i
+ * @param num_p
+ * @return
  */
 int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
 				   double k, double NA, double n_i, int num_p);
