@@ -8,16 +8,19 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
-#include <Eigen/Eigen>
-#include <Eigen/Dense>
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
-#include <opencv2/core/eigen.hpp>
 #include <fftw3.h>
 
 #define OUTPUT_DEBUG std::cout<<"Passed here"<<std::endl;
 
+/**
+ * utility for testing.
+ * @param frame
+ * @param winName
+ */
+void norm_show(cv::InputArray frame, const char* winName);
 
 /**
  * FFTW fourier transform interface.
@@ -46,15 +49,6 @@ void idftplane(int squareSize,
  */
 void convolutionDFT(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
 
-/**
- * Richardson-Lucy reconstruction
- * @param img input image
- * @param core construct PSF core
- * @param out_img the restoration result
- */
-void RichardLucydeconv(cv::InputArray img,
-                       cv::InputArray core,
-                       cv::OutputArray out_img);
 
 /**
  * The using openCV dft to transform img into fourier presentation, and show the normalized
@@ -115,5 +109,12 @@ static void divSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputA
 void RichardLucy(cv::InputArray img,
                  cv::InputArray core,
                  cv::OutputArray out_img);
+/**
+ * testing the way padded method influence the RL-method.
+ * @param _srcI
+ * @param _coreI
+ * @param _dst
+ */
+void RichardLucy_single(cv::InputArray _srcI, cv::InputArray _coreI, cv::OutputArray _dst);
 
 #endif //PSF_DECONVPSF_H

@@ -136,14 +136,79 @@ int single_fft(cv::InputArray in_img, cv::OutputArray out_img)
     return 0;
 }
 
+void RichardLucy_single(cv::InputArray _srcI, cv::InputArray _coreI, cv::OutputArray _dst)
+{
+    cv::Mat srcI = _srcI.getMat();
+    cv::Mat coreI = _coreI.getMat();
+    cv::Mat coreIpadded, estIpadded, corrIpadded, img_complex, core_complex, denom_complex, corr_complex, img_denom, img_est, img_corr;
+
+    // initial the est_img for first iteration
+    img_est = srcI.clone();
+
+    // make padded
+    int width = srcI.cols + coreI.cols*2;
+    int height = srcI.rows + coreI.rows*2;
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);    denom_complex = img_complex.clone();
+
+    // ensure the main information location
+    cv::Rect rect(coreI.cols/2, coreI.rows/2, srcI.cols, srcI.rows);
+    cv::Rect rect2(coreI.cols, coreI.rows, srcI.cols, srcI.rows);
+
+    // padded the image make the main information in the center.
+    cv::copyMakeBorder(coreI, coreIpadded, 0, opt_height-coreI.rows, 0, opt_width - coreI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    // make image information in the center
+    cv::copyMakeBorder(img_est, estIpadded, 0, opt_height-srcI.rows, 0, opt_width-srcI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    // form the complex Mat
+    cv::Mat planeI[] = {cv::Mat_<double>(estIpadded), cv::Mat::zeros(estIpadded.size(), CV_64F)};
+    cv::Mat planeCore[] = {cv::Mat_<double>(coreIpadded), cv::Mat::zeros(coreIpadded.size(), CV_64F)};
+    cv::merge(planeCore, 2, core_complex);
+    cv::merge(planeI, 2, img_complex);
+
+    // execute the DFT
+    cv::dft(core_complex, core_complex);
+    cv::dft(img_complex, img_complex);
+
+    cv::mulSpectrums(img_complex, core_complex, denom_complex, cv::DFT_COMPLEX_OUTPUT);
+    cv::idft(denom_complex, denom_complex, cv::DFT_COMPLEX_OUTPUT);
+
+    cv::split(denom_complex, planeI);
+    cv::magnitude(planeI[0](rect), planeI[1](rect), img_denom);
+    cv::divide(srcI, img_denom, img_corr);
+
+    cv::copyMakeBorder(img_corr, corrIpadded, coreI.rows/2, opt_height-srcI.rows-coreI.rows/2, coreI.cols/2, opt_width-srcI.cols-coreI.cols/2, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    cv::Mat planeCorr[] = {cv::Mat_<double>(corrIpadded), cv::Mat::zeros(corrIpadded.size(), CV_64F)};
+    cv::merge(planeCorr, 2, corr_complex);
+    cv::dft(corr_complex, corr_complex);
+    cv::mulSpectrums(corr_complex, core_complex, corr_complex, cv::DFT_COMPLEX_OUTPUT);
+    cv::idft(corr_complex, corr_complex, cv::DFT_COMPLEX_OUTPUT);
+    cv::split(corr_complex, planeCorr);
+    cv::magnitude(planeCorr[0](rect2), planeCorr[1](rect2), img_corr);
+
+    norm_show(img_corr, "corr img");
+    cv::multiply(img_est, img_corr, img_est);
+
+    img_est.copyTo(_dst);
+}
+
+void norm_show(cv::InputArray frame, const char* winName)
+{
+    CV_Assert(frame.channels() == 1);
+
+    cv::Mat tmp;
+    cv::normalize(frame, tmp, 0, 1, CV_MINMAX);
+    cv::imshow(winName, tmp);
+}
 
 void RichardLucy(cv::InputArray img,
                        cv::InputArray core,
                        cv::OutputArray out_img)
 {
-    cv::Mat im_correction, im_new_est, in_padded, core_padded, adj_padded;
     cv::Mat in_img = img.getMat(), core_img = core.getMat();
     cv::Mat in_complex, core_complex, core_adj, core_conj, norm_img;
+    cv::Mat im_correction, im_new_est, in_padded, core_padded, adj_padded;
     im_new_est = in_img.clone();
 
     // padded the image for better fft performance
@@ -294,7 +359,6 @@ void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     cv::magnitude(planesC[0], planesC[1], planesC[0]);
     cv::normalize(planesC[0], planesC[0], 0, 1, CV_MINMAX);
     planesC[0](rect).copyTo(C);
-//    planesC[0].copyTo(C);
 }
 
 void relocation(cv::InputArray A, cv::OutputArray B)

@@ -207,18 +207,18 @@ int main(int argc, const char *argv[])
     for (int i = 0; i < total_seq; ++i) {
         getTIFF(test_image_name.c_str(), in_image, i);
 
-        // applying the PSF convolution operation
         // TODO(peo):Set up denoise mechanism
-//        divide_fourier(in_image, psf_core, out_image);
-        RichardLucy(in_image.clone(), psf_core.clone(), out_image);
+//        RichardLucy(in_image.clone(), psf_core.clone(), out_image);
+        RichardLucy_single(in_image, psf_core, out_image);
 
         // operation for exhibition
         cv::normalize(in_image, in_image, 0, 1, CV_MINMAX);
         cv::resize(in_image, in_image, cv::Size(width, height));
         cv::resize(out_image, out_image, cv::Size(width, height));
         cv::imshow("RAW", in_image);
-        cv::imshow("PSF", psf_show);
+        // cv::imshow("PSF", psf_show);
         cv::imshow("DE", out_image);
+
         k = cv::waitKey(30);
         if (k == 27) {
             std::cout << std::endl;
@@ -294,9 +294,9 @@ int main(int argc, const char *argv[])
     cv::VideoCapture cap = cv::VideoCapture("/media/peo/Docunment/视频/PlaysTV/IMG_0752.mov");
 
     int k, count = (int)cap.get(cv::CAP_PROP_FRAME_COUNT);
-    cap >> in_image;
+    cap >> frame;
     count --;
-    int width = in_image.cols, height = in_image.rows;
+    int width = frame.cols, height = frame.rows;
 
     // for fitting the screen size
     while (width > 1000 || height > 1000) {
@@ -306,21 +306,22 @@ int main(int argc, const char *argv[])
 
     // main loop begin
     for(int i = 1; i < count; i++) {
-        cap >> frame;
         cv::cvtColor(frame, im_gray, cv::COLOR_BGR2GRAY);
         cv::resize(im_gray, im_gray, cv::Size(width, height));
         multiply_fourier(im_gray, psf_core, in_image);
 
         // TODO(peo):substitute the function.
         // RichardLucy(in_image, psf_core, out_image);
+//        divide_fourier(in_image, psf_core, out_image);
+        RichardLucy_single(in_image, psf_core, out_image);
 
-        divide_fourier(in_image, psf_core, out_image);
         cv::imshow("CONV", in_image);
         cv::imshow("DE", out_image);
         k = cv::waitKey(1);
         if (k == 27) {
             break;
         }
+        cap >> frame;
     } // main loop end
     cap.release();
 #endif
