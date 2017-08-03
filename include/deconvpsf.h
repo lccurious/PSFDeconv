@@ -89,6 +89,14 @@ void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
 void divide_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
 
 /**
+ * for testing frequency matrix FFT transform
+ * @param A
+ * @param B
+ * @param C
+ */
+void divide_fourier_test(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
+
+/**
  * The shape of _srcA and _srcB must have the same shape and data type
  * @param _srcA
  * @param _srcB

@@ -250,7 +250,7 @@ void RichardLucy(cv::InputArray img,
     cv::merge(core_planes, 2, core_conj);
     cv::Rect rect_in = cv::Rect(0, 0, img.cols(), img.rows());
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 4; i++) {
 
         // Loop begin
         // Replace the original data
@@ -278,7 +278,7 @@ void RichardLucy(cv::InputArray img,
         cv::dft(in_complex, in_complex);
 
         // deconvolution $H^T$
-//        divSpectrums(in_complex.clone(), core_complex, in_complex, 0, true);
+        divSpectrums(in_complex.clone(), core_complex, in_complex, 0, true);
         cv::mulSpectrums(in_complex.clone(), core_complex, in_complex, 0, true);
 
         cv::idft(in_complex, in_complex);
@@ -286,14 +286,10 @@ void RichardLucy(cv::InputArray img,
         cv::magnitude(corr_planes[0], corr_planes[1], corr_planes[0]);
         corr_planes[0](rect_in).copyTo(im_correction);
         cv::multiply(im_new_est, im_correction, im_new_est);
-//        im_correction.copyTo(norm_img);
         im_new_est.copyTo(norm_img);
     }
     // compute the convolution in frequency domain:denom
     cv::normalize(norm_img, norm_img, 0, 1, CV_MINMAX);
-    norm_img *= 255;
-    norm_img.convertTo(norm_img, CV_8UC1);
-    cv::equalizeHist(norm_img, norm_img);
     norm_img.copyTo(out_img);
 }
 
@@ -350,13 +346,14 @@ void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     cv::Mat paddedA, paddedB, spectrumC;
     cv::Mat matA, matB;
     matA = A.getMat();matB = B.getMat();
-    int width = A.cols() + B.cols() - 1;
-    int height = A.rows() + B.rows() - 1;
+    // make more space for preventing image distoration
+    int width = A.cols() + B.cols()*2 - 1;
+    int height = A.rows() + B.rows()*2 - 1;
     int opt_width = cv::getOptimalDFTSize(width);
     int opt_height = cv::getOptimalDFTSize(height);
-    cv::Rect rect(0, 0, matA.cols, matA.rows);
+    cv::Rect rect(0, 0, matA.cols+matB.cols, matA.rows+matB.rows);
 
-    cv::copyMakeBorder(matA, paddedA, 0, opt_height-matA.rows, 0, opt_width-matA.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::copyMakeBorder(matA, paddedA, matB.rows, opt_height-matA.rows-matB.rows, matB.cols, opt_width-matA.cols-matB.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
     cv::copyMakeBorder(matB, paddedB, opt_height-matB.rows, 0, opt_width-matB.cols, 0, cv::BORDER_CONSTANT, cv::Scalar::all(0));
 
     // DFT
@@ -376,8 +373,8 @@ void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     cv::split(com_C, planesC);
     cv::magnitude(planesC[0], planesC[1], planesC[0]);
     cv::normalize(planesC[0], planesC[0], 0, 1, CV_MINMAX);
-//    planesC[0](rect).copyTo(C);
-    planesC[0].copyTo(C);
+    planesC[0](rect).copyTo(C);
+//    planesC[0].copyTo(C);
 }
 
 void relocation(cv::InputArray A, cv::OutputArray B)
@@ -412,6 +409,43 @@ void divide_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     int height = matA.rows;//+matB.cols;
     int opt_width = width;//cv::getOptimalDFTSize(width);
     int opt_height = height;//cv::getOptimalDFTSize(height);
+    cv::Rect rect(0, 0, matA.cols-matB.cols, matA.rows-matB.rows);
+
+    cv::copyMakeBorder(matA, paddedA, 0, opt_height-matA.rows, 0, opt_width-matA.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::copyMakeBorder(matB, paddedB, 0, opt_height-matB.rows, 0, opt_width-matB.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+    // DFT
+    cv::Mat planesA[] = {cv::Mat_<double>(paddedA), cv::Mat::zeros(paddedA.size(), CV_64F)};
+    cv::Mat planesB[] = {cv::Mat_<double>(paddedB), cv::Mat::zeros(paddedB.size(), CV_64F)};
+    cv::Mat planesC[] = {cv::Mat::zeros(paddedB.size(), CV_64F), cv::Mat::zeros(paddedB.size(), CV_64F)};
+
+    cv::Mat com_A, com_B, com_C, icom_B;
+    cv::merge(planesA, 2, com_A);
+    cv::merge(planesB, 2, com_B);
+    cv::dft(com_A, com_A);
+    cv::dft(com_B, com_B);
+    cv::split(com_B, planesB);
+
+    divSpectrums(com_A, com_B, com_C, 0, true);
+
+    cv::idft(com_C, com_C);
+    cv::split(com_C, planesC);
+
+    cv::magnitude(planesC[0], planesC[1], planesC[0]);
+    cv::normalize(planesC[0], planesC[0], 0, 1, CV_MINMAX);
+//    planesC[0](rect).copyTo(C);
+    planesC[0].copyTo(C);
+}
+
+void divide_fourier_test(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
+{
+    cv::Mat paddedA, paddedB, spectrumC, paddedBs;
+    cv::Mat matA, matB;
+    matA = A.getMat(), matB = B.getMat();
+    int width = matA.cols+matB.cols-1;
+    int height = matA.rows+matB.rows-1;
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);
     cv::Rect rect(0, 0, matA.cols-matB.cols, matA.rows-matB.rows);
 
     cv::copyMakeBorder(matA, paddedA, 0, opt_height-matA.rows, 0, opt_width-matA.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
@@ -528,15 +562,15 @@ static void divSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputA
             if (!conjB) {
                 for (int j = 0; j < j1; j += 2) {
                     double denom = dataB[j] * dataB[j] + dataB[j + 1] * dataB[j + 1] + eps;
-                    double re = dataA[j] * dataB[j] + dataA[j + 1] * dataB[j + 1];
-                    double im = dataA[j + 1] * dataB[j] * dataB[j] - dataA[j] * dataB[j + 1];
+                    double re = dataA[j] * dataB[j] - dataA[j + 1] * dataB[j + 1];
+                    double im = dataA[j + 1] * dataB[j] + dataA[j] * dataB[j + 1];
                     dataC[j] = re / denom;
                     dataC[j + 1] = im / denom;
                 }
             } else {
                 for (int j = j0; j < j1; j += 2) {
                     double denom = dataB[j] * dataB[j] + dataB[j + 1] * dataB[j + 1] + eps;
-                    double re = dataA[j] * dataB[j] - dataA[j + 1] * dataB[j + 1];
+                    double re = dataA[j] * dataB[j] + dataA[j + 1] * dataB[j + 1];
                     double im = dataA[j + 1] * dataB[j] - dataA[j] * dataB[j + 1];
                     dataC[j] = re / denom;
                     dataC[j + 1] = im / denom;

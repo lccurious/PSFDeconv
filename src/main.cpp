@@ -209,8 +209,7 @@ int main(int argc, const char *argv[])
 
         // applying the PSF convolution operation
         // TODO(peo):Set up denoise mechanism
-//         divide_fourier(in_image, psf_core, out_image);
-//        RichardLucydeconv(in_image.clone(), psf_core, out_image);
+//        divide_fourier(in_image, psf_core, out_image);
         RichardLucy(in_image.clone(), psf_core.clone(), out_image);
 
         // operation for exhibition
@@ -220,7 +219,7 @@ int main(int argc, const char *argv[])
         cv::imshow("RAW", in_image);
         cv::imshow("PSF", psf_show);
         cv::imshow("DE", out_image);
-        k = cv::waitKey(60);
+        k = cv::waitKey(30);
         if (k == 27) {
             std::cout << std::endl;
             break;
@@ -292,7 +291,7 @@ int main(int argc, const char *argv[])
     double core_sum = cv::sum(psf_core)[0];
     psf_core /= core_sum;
 
-    cv::VideoCapture cap = cv::VideoCapture("/media/peo/Docunment/视频/vlc-record-2017-05-27-19h49m41s-DJI_0012.MP4-.mp4");
+    cv::VideoCapture cap = cv::VideoCapture("/media/peo/Docunment/视频/PlaysTV/IMG_0752.mov");
 
     int k, count = (int)cap.get(cv::CAP_PROP_FRAME_COUNT);
     cap >> in_image;
@@ -306,7 +305,7 @@ int main(int argc, const char *argv[])
     }
 
     // main loop begin
-    for(int i = 0; i < count; i++) {
+    for(int i = 1; i < count; i++) {
         cap >> frame;
         cv::cvtColor(frame, im_gray, cv::COLOR_BGR2GRAY);
         cv::resize(im_gray, im_gray, cv::Size(width, height));
