@@ -26,6 +26,6 @@ make
 - [ ] 图像尺寸对比
 
 ## Current Result
-|PSF|One Line Value|
+|convolved image|deconvolved image|
 |:---:|:---:|
-|![PSF](images/Complete_PSF.png)|![Born&wolf](images/born_wolf.png)|
+|![convolved](images/convolved.png)|![Born&wolf](images/deconvolved.png)|
