@@ -101,14 +101,17 @@ void divide_fourier_test(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
 static void divSpectrums(cv::InputArray _srcA, cv::InputArray _srcB, cv::OutputArray _dst, int flags, bool conjB);
 
 /**
- * Richard-Lucy implementation
- * @param img
- * @param core
- * @param out_img
+ * Richardson-Lucy implementation
+ * @param _srcI
+ * @param _coreI
+ * @param _dst
+ * @param iteration
  */
-void RichardLucy(cv::InputArray img,
-                 cv::InputArray core,
-                 cv::OutputArray out_img);
+void RichardLucy(cv::InputArray _srcI,
+                 cv::InputArray _coreI,
+                 cv::OutputArray _dst,
+                 int iteration);
+
 /**
  * testing the way padded method influence the RL-method.
  * @param _srcI

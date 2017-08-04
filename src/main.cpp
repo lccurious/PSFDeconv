@@ -311,9 +311,7 @@ int main(int argc, const char *argv[])
         multiply_fourier(im_gray, psf_core, in_image);
 
         // TODO(peo):substitute the function.
-        // RichardLucy(in_image, psf_core, out_image);
-//        divide_fourier(in_image, psf_core, out_image);
-        RichardLucy_single(in_image, psf_core, out_image);
+        RichardLucy(in_image, psf_core, out_image, 10);
 
         cv::imshow("CONV", in_image);
         cv::imshow("DE", out_image);
