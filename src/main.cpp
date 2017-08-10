@@ -8,7 +8,7 @@
 #include <iostream>
 
 #include "cvutils.h"
-#include "psf_gen2.h"
+#include "psfgen.h"
 #include "comparemat.h"
 #include "vtkutils.h"
 #include "deconvpsf.h"
@@ -284,6 +284,7 @@ int main(int argc, const char *argv[])
     cv::Mat in_image, out_image, psf_core;
     cv::Mat in_show, out_show, frame, im_gray;
     std::vector<std::vector<double> > psf_matrix;
+    std::vector<double> MSEstat;
 
     born_wolf_full((stack_depth-32), psf_matrix, M_2PI/em_wavelen,NA,refr_index,psf_size);
     psf_core.create((int)psf_matrix.size(), (int)psf_matrix.size(), CV_64F);
@@ -291,7 +292,7 @@ int main(int argc, const char *argv[])
     double core_sum = cv::sum(psf_core)[0];
     psf_core /= core_sum;
 
-    cv::VideoCapture cap = cv::VideoCapture("/media/peo/Docunment/视频/PlaysTV/IMG_0752.mov");
+    cv::VideoCapture cap = cv::VideoCapture("/media/peo/Docunment/视频/PlaysTV/3324178-1-hd.mp4");
 
     int k, count = (int)cap.get(cv::CAP_PROP_FRAME_COUNT);
     cap >> frame;
@@ -300,18 +301,19 @@ int main(int argc, const char *argv[])
 
     // for fitting the screen size
     while (width > 1000 || height > 1000) {
-        width >>= 2;
-        height >>= 2;
+        width >>= 1;
+        height >>= 1;
     }
 
     // main loop begin
     for(int i = 1; i < count; i++) {
         cv::cvtColor(frame, im_gray, cv::COLOR_BGR2GRAY);
         cv::resize(im_gray, im_gray, cv::Size(width, height));
+
         multiply_fourier(im_gray, psf_core, in_image);
 
         // TODO(peo):substitute the function.
-        RichardLucy(in_image, psf_core, out_image, 10);
+        RichardLucy(in_image, psf_core, out_image, MSEstat, 5);
 
         cv::imshow("CONV", in_image);
         cv::imshow("DE", out_image);
@@ -322,6 +324,7 @@ int main(int argc, const char *argv[])
         cap >> frame;
     } // main loop end
     cap.release();
+    vtk1Dplot(MSEstat);
 #endif
 
     return 0;

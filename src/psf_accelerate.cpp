@@ -5,7 +5,7 @@
 // Make program faster
 
 #include <boost/thread.hpp>
-#include "psf_gen2.h"
+#include "psfgen.h"
 #include <boost/progress.hpp>
 #include <iostream>
 

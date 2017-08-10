@@ -1,6 +1,6 @@
 #include "cvutils.h"
 #include "vtkutils.h"
-#include "psf_gen2.h"
+#include "psfgen.h"
 
 #define WIDTH_PSF 32
 #define HEIGHT_PSF 32

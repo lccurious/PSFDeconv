@@ -2,8 +2,8 @@
  * Author: hzn
  */
 
-#ifndef PSF_GEN2_H
-#define PSF_GEN2_H
+#ifndef PSFGEN_H
+#define PSFGEN_H
 
 #include <vector>
 #include <iterator>
@@ -78,4 +78,4 @@ int integral_test(int z,
                   int num_p,
                   int xSize);
 
-#endif //PSF_GEN2_H
+#endif //PSFGENH

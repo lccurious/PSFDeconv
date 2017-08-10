@@ -5,7 +5,7 @@
 /* This header include the born & wolf generate algorithm
  * Author: hzn
  */
-#include "psf_gen2.h"
+#include "psfgen.h"
 
 int bessel_series()
 {

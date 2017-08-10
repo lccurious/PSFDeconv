@@ -13,8 +13,8 @@ set(SOURCE_FILES src/main.cpp
 		src/cvutils.cpp
 		include/deconvpsf.h
 		src/deconvpsf.cpp
-		include/psf_gen2.h
-        src/psf_gen2.cpp
+        include/psfgen.h
+        src/psfgen.cpp
 		include/vtkutils.h
 		src/vtkutils.cpp
 		include/config.h)

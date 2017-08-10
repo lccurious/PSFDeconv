@@ -217,15 +217,14 @@ void RichardLucy(cv::InputArray _srcI,
     int width = srcI.cols + coreI.cols*2;
     int height = srcI.rows + coreI.rows*2;
     int opt_width = cv::getOptimalDFTSize(width);
-    int opt_height = cv::getOptimalDFTSize(height);    denom_complex = img_complex.clone();
+    int opt_height = cv::getOptimalDFTSize(height);
 
     // ensure the main information location
     cv::Rect rect(coreI.cols/2, coreI.rows/2, srcI.cols, srcI.rows);
-    cv::Rect rect2(coreI.cols, coreI.rows, srcI.cols, srcI.rows);
 
     // padded the image make the main information in the center.
     // constant part
-    cv::copyMakeBorder(coreI, coreIpadded, 0, opt_height-coreI.rows, 0, opt_width - coreI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::copyMakeBorder(coreI, coreIpadded, opt_height-coreI.rows, 0, opt_width - coreI.cols, 0, cv::BORDER_CONSTANT, cv::Scalar::all(0));
     cv::Mat planeCore[] = {cv::Mat_<double>(coreIpadded), cv::Mat::zeros(coreIpadded.size(), CV_64F)};
     cv::merge(planeCore, 2, core_complex);
     // execute DFT
@@ -234,7 +233,9 @@ void RichardLucy(cv::InputArray _srcI,
     for (int i = 0; i < iteration; i++) {
 
         // make image information in the center
-        cv::copyMakeBorder(img_est, estIpadded, 0, opt_height-srcI.rows, 0, opt_width-srcI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+        cv::copyMakeBorder(img_est, estIpadded, coreI.rows, opt_height-srcI.rows-coreI.rows, coreI.cols, opt_width-srcI.cols-coreI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+
         // form the complex Mat
         cv::Mat planeI[] = {cv::Mat_<double>(estIpadded), cv::Mat::zeros(estIpadded.size(), CV_64F)};
         cv::merge(planeI, 2, img_complex);
@@ -244,27 +245,110 @@ void RichardLucy(cv::InputArray _srcI,
         // form the RL denom
         cv::mulSpectrums(img_complex, core_complex, denom_complex, cv::DFT_COMPLEX_OUTPUT);
         cv::idft(denom_complex, denom_complex, cv::DFT_COMPLEX_OUTPUT);
-
         cv::split(denom_complex, planeI);
         cv::magnitude(planeI[0](rect), planeI[1](rect), img_denom);
+
         cv::divide(srcI, img_denom, img_corr);
-
-        cv::copyMakeBorder(img_corr, corrIpadded, coreI.rows/2, opt_height-srcI.rows-coreI.rows/2, coreI.cols/2, opt_width-srcI.cols-coreI.cols/2, cv::BORDER_CONSTANT, cv::Scalar::all(0));
-
+        cv::copyMakeBorder(img_corr, corrIpadded, coreI.rows, opt_height-img_corr.rows-coreI.rows, coreI.cols, opt_width-img_corr.cols-coreI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
         cv::Mat planeCorr[] = {cv::Mat_<double>(corrIpadded), cv::Mat::zeros(corrIpadded.size(), CV_64F)};
         cv::merge(planeCorr, 2, corr_complex);
         cv::dft(corr_complex, corr_complex);
-        cv::mulSpectrums(corr_complex, core_complex, corr_complex, cv::DFT_COMPLEX_OUTPUT);
+        cv::mulSpectrums(corr_complex.clone(), core_complex, corr_complex, cv::DFT_COMPLEX_OUTPUT);
         cv::idft(corr_complex, corr_complex, cv::DFT_COMPLEX_OUTPUT);
         cv::split(corr_complex, planeCorr);
-        cv::magnitude(planeCorr[0](rect2), planeCorr[1](rect2), img_corr);
+        cv::magnitude(planeCorr[0](rect), planeCorr[1](rect), img_corr);
+
         // subsitatute estimated image with newer estimated image
         cv::multiply(img_est, img_corr, img_est);
     }
     img_est.copyTo(_dst);
 }
 
-void fourier_show(cv::InputArray img)
+double MSEest(cv::InputArray _srcIA, cv::InputArray _srcIB)
+{
+    cv::Mat srcA = _srcIA.getMat();
+    cv::Mat srcB = _srcIB.getMat();
+    cv::Mat disI;
+    cv::subtract(srcA, srcB, disI);
+    cv::pow(disI, 2, disI);
+    double mse = cv::sum(disI)[0];
+    return mse;
+}
+
+void RichardLucy(cv::InputArray _srcI,
+                 cv::InputArray _coreI,
+                 cv::OutputArray _dst,
+                 std::vector<double> &mse_stat,
+                 int iteration = 5)
+{
+    cv::Mat srcI = _srcI.getMat();
+    cv::Mat coreI = _coreI.getMat();
+    cv::Mat coreIpadded, estIpadded, corrIpadded, img_complex, core_complex, denom_complex, corr_complex, img_denom, img_est, img_est_newer, img_corr;
+
+    // initial the est_img for first iteration
+    img_est = srcI.clone();
+
+    // make padded
+    int width = srcI.cols + coreI.cols * 2;
+    int height = srcI.rows + coreI.rows * 2;
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);    denom_complex = img_complex.clone();
+
+    // ensure the main information location
+    cv::Rect rect(coreI.cols/2, coreI.rows/2, srcI.cols, srcI.rows);
+    cv::Rect rect2(0, 0, srcI.cols, srcI.rows);
+
+    // padded the image make the main information in the center.
+    // constant part
+    cv::copyMakeBorder(coreI, coreIpadded, opt_height - coreI.rows, 0, opt_width - coreI.cols, 0, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+    cv::Mat planeCore[] = { cv::Mat_<double>(coreIpadded), cv::Mat::zeros(coreIpadded.size(), CV_64F) };
+    cv::merge(planeCore, 2, core_complex);
+    // execute DFT
+    cv::dft(core_complex, core_complex);
+
+    for (int i = 0; i < iteration; i++) {
+
+        // make image information in the center
+        cv::copyMakeBorder(img_est, estIpadded, coreI.rows, opt_height - srcI.rows-coreI.rows, coreI.cols, opt_width - srcI.cols-coreI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+        // form the complex Mat
+        cv::Mat planeI[] = { cv::Mat_<double>(estIpadded), cv::Mat::zeros(estIpadded.size(), CV_64F) };
+        cv::merge(planeI, 2, img_complex);
+        // execute the DFT
+        cv::dft(img_complex, img_complex);
+
+        // form the RL denom convolution
+        cv::mulSpectrums(img_complex, core_complex, denom_complex, cv::DFT_COMPLEX_OUTPUT);
+        cv::idft(denom_complex, denom_complex, cv::DFT_COMPLEX_OUTPUT);
+        cv::split(denom_complex, planeI);
+        cv::magnitude(planeI[0](rect), planeI[1](rect), img_denom);
+        cv::divide(srcI, img_denom, img_corr);
+        cv::copyMakeBorder(img_corr, corrIpadded, coreI.rows, opt_height - srcI.rows-coreI.rows, coreI.cols, opt_width - srcI.cols-coreI.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));
+
+        // deconvolution
+        cv::Mat planeCorr[] = { cv::Mat_<double>(corrIpadded), cv::Mat::zeros(corrIpadded.size(), CV_64F) };
+        cv::merge(planeCorr, 2, corr_complex);
+        cv::dft(corr_complex, corr_complex);
+        // TODO(peo):Here something wrong with the divation
+        // Yes divition is wrong the multiply is true!
+        cv::mulSpectrums(corr_complex, core_complex, corr_complex, 0);
+        cv::idft(corr_complex, corr_complex, cv::DFT_COMPLEX_OUTPUT);
+        cv::split(corr_complex, planeCorr);
+
+        cv::magnitude(planeCorr[0](rect), planeCorr[1](rect), img_corr);
+        // subsitatute estimated image with newer estimated image
+        cv::multiply(img_est, img_corr, img_est_newer);
+
+        // statistic the MSE during the RL processing
+        std::cout << "iteration: " << i << "\tMSE: " << MSEest(img_est_newer, img_est) << std::endl;
+        mse_stat.push_back(MSEest(img_est_newer, img_est));
+
+        // update the img_est corresponding to f in the equation.
+        img_est_newer.copyTo(img_est);
+    }
+    img_est.copyTo(_dst);
+}
+
+void fourier_show(cv::InputArray img, const char* windowName)
 {
     // padded the image for better fft processing
     cv::Mat padded;
@@ -307,9 +391,8 @@ void fourier_show(cv::InputArray img)
 
     // prepare for exhibition
     cv::Mat mag_img(mag_mat);
-    cv::normalize(img.getMat(), img.getMat(), 255, 0);
     cv::normalize(mag_img, mag_img, 255, 0);
-    cv::imshow("FOURIER", mag_img);
+    cv::imshow(windowName, mag_img);
 }
 
 void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
@@ -318,8 +401,8 @@ void multiply_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     cv::Mat matA, matB;
     matA = A.getMat();matB = B.getMat();
     // make more space for preventing image distoration
-    int width = A.cols() + B.cols()*2 - 1;
-    int height = A.rows() + B.rows()*2 - 1;
+    int width = A.cols() + B.cols()*2;
+    int height = A.rows() + B.rows()*2;
     int opt_width = cv::getOptimalDFTSize(width);
     int opt_height = cv::getOptimalDFTSize(height);
     cv::Rect rect(0, 0, matA.cols+matB.cols, matA.rows+matB.rows);
@@ -375,10 +458,10 @@ void divide_fourier(cv::InputArray A, cv::InputArray B, cv::OutputArray C)
     cv::Mat paddedA, paddedB, spectrumC, paddedBs;
     cv::Mat matA, matB;
     matA = A.getMat();matB = B.getMat();
-    int width = matA.cols;//+matB.cols;
-    int height = matA.rows;//+matB.cols;
-    int opt_width = width;//cv::getOptimalDFTSize(width);
-    int opt_height = height;//cv::getOptimalDFTSize(height);
+    int width = matA.cols+matB.cols;
+    int height = matA.rows+matB.cols;
+    int opt_width = cv::getOptimalDFTSize(width);
+    int opt_height = cv::getOptimalDFTSize(height);
     cv::Rect rect(0, 0, matA.cols-matB.cols, matA.rows-matB.rows);
 
     cv::copyMakeBorder(matA, paddedA, 0, opt_height-matA.rows, 0, opt_width-matA.cols, cv::BORDER_CONSTANT, cv::Scalar::all(0));

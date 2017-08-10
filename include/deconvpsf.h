@@ -55,7 +55,7 @@ void convolutionDFT(cv::InputArray A, cv::InputArray B, cv::OutputArray C);
  * fourier domain image with openCV highgui
  * @param img the input image
  */
-void fourier_show(cv::InputArray img);
+void fourier_show(cv::InputArray img, const char* windowName);
 
 /**
  * execute the FFT by using method in FFTW, Only process the one channel
@@ -119,5 +119,28 @@ void RichardLucy(cv::InputArray _srcI,
  * @param _dst
  */
 void RichardLucy_single(cv::InputArray _srcI, cv::InputArray _coreI, cv::OutputArray _dst);
+
+/**
+ * Richardson-Lucy implementation with MSE history.
+ * @param _srcI
+ * @param _coreI
+ * @param _dst
+ * @param mse_stat
+ * @param iteration
+ */
+void RichardLucy(cv::InputArray _srcI,
+                 cv::InputArray _coreI,
+                 cv::OutputArray _dst,
+                 std::vector<double> &mse_stat,
+                 int iteration);
+
+
+/**
+ * MSE evaluation between the SrcA and SrcB
+ * @param _srcIA
+ * @param _srcIB
+ * @return
+ */
+double MSEest(cv::InputArray _srcIA, cv::InputArray _srcIB);
 
 #endif //PSF_DECONVPSF_H
