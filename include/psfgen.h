@@ -14,6 +14,7 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/progress.hpp>
+#include <opencv2/opencv.hpp>
 
 extern int AiryRadius;
 
@@ -54,9 +55,6 @@ int born_wolf(int z, std::vector<std::vector<double> >& M2D,
 int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
 				   double k, double NA, double n_i, int num_p);
 
-int born_wolf_zstack(std::vector<int> zs,
-                     std::vector<std::vector<std::vector<double> > >& M3D,
-                     double k, double NA, double n_i, int num_p);
 
 /* Test function for bessel integral
  */
@@ -77,5 +75,20 @@ int integral_test(int z,
                   std::vector<double>& int_vec,
                   int num_p,
                   int xSize);
+
+/**
+ * with full stack generation;
+ * @param PSF3D
+ * @param numstack
+ * @param focal_idx
+ * @param PSFSize
+ * @param k
+ * @param NA
+ * @param n_i
+ * @return
+ */
+int BornWolf_stack(std::vector<cv::Mat> &PSF3D, int numstack, int focal_idx,
+                   int PSFSize,
+                   double PIK, double NA, double n_i);
 
 #endif //PSFGENH

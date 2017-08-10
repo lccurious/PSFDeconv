@@ -129,21 +129,6 @@ int born_wolf_full(int z, std::vector<std::vector<double> >& M2D,
     return 0;
 }
 
-// TODO(peo): Here complete the PSF accelerate algorithm.
-//double born_wolf3D(double k, double NA, double refr_n, int psfSize, int stackSize)
-//{
-//    std::vector<std::vector<double> > baseM[psfSize];
-//    double const_ratio, const_opd;
-//    for (int x = 0; x < psfSize; ++x) {
-//        baseM[x].resize(psfSize);
-//        for (int y = 0; y < psfSize; ++y) {
-//            const_ratio = k*NA / refr_n*sqrt(x*x+y*y);
-//
-//        }
-//    }
-//    double const_ratio = k * NA / refr_n * sqrt(x*x + y*y);
-//}
-
 int born_wolf_test(int z, std::vector<std::vector<double> >& M2D,
                    double k, double NA, double n_i, int num_p)
 {
@@ -207,35 +192,85 @@ int integral_test(int z,
     return 0;
 }
 
-// TODO: To be finished.
-int born_wolf_zstack(std::vector<int> zs,
-                     std::vector<std::vector<std::vector<double> > >& M3D,
-                     double k, double NA, double n_i, int num_p)
+int BornWolf_stack(std::vector<cv::Mat> &PSF3D, int numstack, int focal_idx,
+                  int PSFSize,
+                  double PIK, double NA, double n_i)
 {
-    int step = 800 / num_p;
-    int z_num = zs.size();
-    double bessel_res = 0.0;
-    try
-    {
-        for (int z = 0; z < num_p; z++)
-        {
-            M3D[k].resize(z_num);
-            for (int i = 0; i < num_p; i++)
-            {
-                M3D[k][i].resize(num_p);
-                for (int j = 0; j <= i; j++)
-                {
-                    bessel_res = born_wolf_point(k, NA, n_i, j*step, i*step, zs[k]);
-                    M3D[z][i][j] = bessel_res;
-                    M3D[z][j][i] = bessel_res;
+    boost::progress_display *show_progress1 = NULL;
+    show_progress1 = new boost::progress_display(PSFSize*PSFSize/2);
+
+    // Control the step by.
+    int step = AiryRadius / PSFSize;
+    int num_p = 1000;
+    double delta_v = 1.0 / num_p;
+    int x, y;
+    double v, bess_tmp;
+
+    std::vector<std::vector<std::vector<double> > > tmpStore;
+    /**
+     * This part for storing the middle data into the menemory.
+     */
+    tmpStore.resize(PSFSize);
+    for (int i = 0; i < PSFSize; i++) {
+        x = i*step;
+        tmpStore[i].resize(PSFSize);
+        for (int j = 0; j <= i; j++) {
+            y = j*step;
+            double const_ratio = PIK * NA / n_i * std::sqrt(x*x + y*y);
+            try{
+                v=0.0;
+                for (int k = 0; k < num_p; k++) {
+                    bess_tmp = boost::math::sph_bessel(0, v*const_ratio);
+                    tmpStore[i][j].push_back(bess_tmp);
+                    v += delta_v;
                 }
             }
-            std::cout << " " << z << " / " << z_num << "\tfinished" << std::endl;
+            catch (std::exception ex)
+            {
+                std::cout << "Thrown exception " << ex.what() << std::endl;
+            }
+            ++(*show_progress1);
         }
     }
-    catch (std::exception ex)
-    {
-        std::cout << "Thrown exception : " << ex.what() << std::endl;
+    /**
+     * tmp data stored.
+     */
+
+    std::cout << " >>> start zstack computation" << std::endl;
+    boost::progress_display *show_progress2 = NULL;
+    show_progress2 = new boost::progress_display(numstack);
+    cv::Mat PSF_plane(PSFSize*2, PSFSize*2, CV_64F, cv::Scalar::all(0));
+    cv::Mat PSF_cp(PSFSize, PSFSize, CV_64F, cv::Scalar::all(0));
+    std::complex<double>bess_sum(0.0, 0.0);
+    std::complex<double>opd(0.0, 0.0);
+    double bessel_res;
+    for (int k = 0; k < numstack; k++) {
+        double const_opd = -0.5*PIK*(k-focal_idx)*step*NA*NA/n_i/n_i;
+        for(int i = 0; i < PSFSize; i++) {
+            for (int j = 0; j <= i; j++) {
+                v = 0.0;
+                bess_sum = 0.0;
+                for (int n = 0; n < num_p; n++) {
+                    opd.imag(v*v*const_opd);
+                    bess_sum += tmpStore[i][j][n] * std::exp(opd) * delta_v;
+                    v += delta_v;
+                }
+                bessel_res = std::pow(1.0*std::fabs(bess_sum), 2);
+                PSF_cp.at<double>(i, j) = bessel_res;
+                PSF_cp.at<double>(j, i) = bessel_res;
+            }
+        }
+        for (int idi = 0; idi < PSFSize; ++idi) {
+            for (int idj = 0; idj < PSFSize; ++idj) {
+                PSF_plane.at<double>(idi+PSFSize, idj+PSFSize) = PSF_cp.at<double>(idi, idj);
+                PSF_plane.at<double>(PSFSize-idi-1, idj+PSFSize) = PSF_cp.at<double>(idi, idj);
+                PSF_plane.at<double>(idi+PSFSize, PSFSize-idj-1) = PSF_cp.at<double>(idi, idj);
+                PSF_plane.at<double>(PSFSize-idi-1, PSFSize-idj-1) = PSF_cp.at<double>(idi, idj);
+            }
+        }
+        PSF3D.push_back(PSF_plane.clone());
+        ++(*show_progress2);
     }
+    std::cout << "zstack psf generated!" << std::endl;
     return 0;
 }

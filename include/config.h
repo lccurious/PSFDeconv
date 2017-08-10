@@ -15,6 +15,7 @@
 //#define TIFF_READ_TEST
 //#define TRACK_BAR_NEURON
 //#define PSF_STACK_VIEW
-#define RLAL_TEST
+//#define RLAL_TEST
+#define RESTORE_TEST
 
 #endif //PSF_CONFIG_H

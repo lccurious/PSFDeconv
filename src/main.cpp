@@ -87,6 +87,33 @@ int main(int argc, const char *argv[])
     }
 
 
+#ifdef RESTORE_TEST
+    cv::Mat in_image, out_image, PSF_tmp;
+    std::vector<cv::Mat> PSF_3D;
+    std::vector<std::vector<double> > psf_matrix;
+    int k;
+    int num_stackin = TIFFframenumber(test_image_name.c_str());
+    std::cout << "Start processing " << num_stackin << " TIFF raw image" << std::endl;
+    std::cout << "Start generating PSF core..." << std::endl;
+//    boost::progress_display *show_progress = NULL;
+//    show_progress = new boost::progress_display(num_stackin);
+    BornWolf_stack(PSF_3D, num_stackin, num_stackin/2, 32, M_2PI/em_wavelen, NA, refr_index);
+    for (int i = 0; i < num_stackin; ++i) {
+//        getTIFF(test_image_name.c_str(), in_image, i);
+
+//        RichardLucy(in_image, PSF_3D[i], out_image, 10);
+//        cv::imshow("Raw", in_image);
+//        cv::imshow("RL", out_image);
+
+        cv::resize(PSF_3D[i], PSF_tmp, cv::Size(512, 512));
+        norm_show(PSF_tmp, "PSF");
+        k = cv::waitKey(60);
+        if (k == 27) {
+            break;
+        }
+    }
+
+#endif
 
 #if defined(PSF_DEMON) || defined(INTEGRAL_TEST) || defined(PSF_GEN_COMPARE)// show psf demon
     std::vector<std::vector<double> > psf_matrix;
@@ -161,19 +188,6 @@ int main(int argc, const char *argv[])
     cv::waitKey(-1);
     std::cout << "assigned successful!" << std::endl;
 #endif // DFT TEST
-
-#ifdef LOAD_TIFF_TEST
-    cv::Mat image;
-    image = cv::imread("/media/peo/Docunment/DeskTop/deconv/SmallFOV/Actin_CoverslipView.tif");
-    if (! image.data)
-    {
-        std::cout << "Could not open or find the image" << std::endl;
-        return -1;
-    }
-    cv::namedWindow("TIFF", CV_WINDOW_AUTOSIZE);
-    cv::imshow("TIFF", image);
-    cv::waitKey(-1);
-#endif
 
 #ifdef DECONVOLUTION_TEST
 #ifndef STACK_SIZE_RATIO
