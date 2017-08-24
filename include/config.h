@@ -17,5 +17,5 @@
 //#define PSF_STACK_VIEW
 //#define RLAL_TEST
 #define RESTORE_TEST
-
+//#define TIFF_WRITE_TEST
 #endif //PSF_CONFIG_H

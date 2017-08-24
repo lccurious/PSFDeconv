@@ -190,6 +190,68 @@ int getTIFF(const char* filename, cv::OutputArray out_img, uint16 frame_seq)
     return 0;
 }
 
+void writetifstack(char tifdir[], float *h_Image, uint32 *imsize){
+    uint16 bitPerSample = 16;
+    int imTotalSize = imsize[0] * imsize[1] * imsize[2];
+    uint16 *buf = (uint16 *)_TIFFmalloc(imTotalSize * sizeof(uint16));
+    for (int i = 0; i < imTotalSize; i++){
+        buf[i] = (uint16)h_Image[i];
+    }
+    uint32 imxy = imsize[0] * imsize[1];
+    uint32 nByte = (uint32)(bitPerSample / 8);
+    TIFF *tif = TIFFOpen(tifdir, "w");
+    for (uint32 n = 0; n < imsize[2]; n++){
+        TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, imsize[0]);  // set the width of the image
+        TIFFSetField(tif, TIFFTAG_IMAGELENGTH, imsize[1]);    // set the height of the image
+        TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
+        TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, bitPerSample);    // set the size of the channels
+        TIFFSetField(tif, TIFFTAG_ORIENTATION, (int)ORIENTATION_TOPLEFT);    // set the origin of the image.
+        TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_SEPARATE);
+        TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
+        //   Some other essential fields to set that you do not have to understand for now.
+        TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, imsize[1]);
+        TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+        TIFFWriteEncodedStrip(tif, 0, &buf[imxy * n], imxy * nByte);
+        TIFFWriteDirectory(tif);
+    }
+    (void)TIFFClose(tif);
+    _TIFFfree(buf);
+}
+
+
+void SingleMatToTiff(cv::Mat storeMat, char *TiffName)
+{
+    int width = storeMat.cols;
+    int height = storeMat.rows;
+    int npixels = width*height;
+    uint16 *buf = (uint16 *)_TIFFmalloc(npixels * sizeof(uint16));
+    TIFF *out = TIFFOpen(TiffName, "w");
+    int bitPerSample = 16;
+    int nByte = (bitPerSample / 8);
+
+    TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width);
+    TIFFSetField(out, TIFFTAG_IMAGELENGTH, height);
+    TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);
+    TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, bitPerSample);
+    TIFFSetField(out, TIFFTAG_ORIENTATION, (int)ORIENTATION_TOPLEFT);
+    TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_SEPARATE);
+    TIFFSetField(out, TIFFTAG_COMPRESSION, COMPRESSION_NONE);
+    TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, height);
+    TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            buf[i*width+j] = storeMat.at<float>(i, j);
+        }
+    }
+
+    TIFFWriteEncodedStrip(out, 0, buf, npixels * nByte);
+    TIFFWriteDirectory(out);
+    (void)TIFFClose(out);
+    _TIFFfree(buf);
+}
+
+
 int reconstructZY(const char* filename, cv::OutputArray out_img)
 {
     TIFF *tif = TIFFOpen(filename, "r");

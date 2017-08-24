@@ -42,4 +42,6 @@ static void on_trackbar(int , void*);
 
 int cv_slideWin(const char* filename);
 
+void SingleMatToTiff(cv::Mat storeMat, char* TiffName);
+
 #endif //PSF_CVUTILS_H

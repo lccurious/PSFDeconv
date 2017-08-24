@@ -17,7 +17,7 @@ set(SOURCE_FILES src/main.cpp
         src/psfgen.cpp
 		include/vtkutils.h
 		src/vtkutils.cpp
-		include/config.h)
+		include/config.h src/basiccv.cpp include/basiccv.h)
 
 # BOOST LIB CONFIG
 set(Boost_USE_STATIC_LIBS ON)

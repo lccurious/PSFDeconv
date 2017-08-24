@@ -89,28 +89,31 @@ int main(int argc, const char *argv[])
 
 #ifdef RESTORE_TEST
     cv::Mat in_image, out_image, PSF_tmp;
-    std::vector<cv::Mat> PSF_3D;
     std::vector<std::vector<double> > psf_matrix;
+    std::vector<std::vector<double> > M2D;
     int k;
     int num_stackin = TIFFframenumber(test_image_name.c_str());
     std::cout << "Start processing " << num_stackin << " TIFF raw image" << std::endl;
     std::cout << "Start generating PSF core..." << std::endl;
-//    boost::progress_display *show_progress = NULL;
-//    show_progress = new boost::progress_display(num_stackin);
-    BornWolf_stack(PSF_3D, num_stackin, num_stackin/2, 32, M_2PI/em_wavelen, NA, refr_index);
+    mat2vector(compare_filename.c_str(), M2D, stack_depth);
+    vec2mat(M2D, PSF_tmp);
+    char RLName[60];
+    double *buf = (double *) _TIFFmalloc(in_image.cols * in_image.rows * sizeof(double));
+
+    boost::progress_display *show_progress = NULL;
+    show_progress = new boost::progress_display(num_stackin);
     for (int i = 0; i < num_stackin; ++i) {
-//        getTIFF(test_image_name.c_str(), in_image, i);
+        getTIFF(test_image_name.c_str(), in_image, i);
 
-//        RichardLucy(in_image, PSF_3D[i], out_image, 10);
-//        cv::imshow("Raw", in_image);
-//        cv::imshow("RL", out_image);
-
-        cv::resize(PSF_3D[i], PSF_tmp, cv::Size(512, 512));
-        norm_show(PSF_tmp, "PSF");
-        k = cv::waitKey(60);
+        RichardLucy(in_image, PSF_tmp, out_image, 5);
+        fourier_show(in_image, "RAWFOURIER");
+        norm_show(in_image, "RAW");
+        norm_show(out_image, "RL");
+        k = cv::waitKey(1);
         if (k == 27) {
             break;
         }
+        ++(*show_progress);
     }
 
 #endif
@@ -155,7 +158,6 @@ int main(int argc, const char *argv[])
 #endif
 
     vtk_2Dplot_com(psf_matrix[127], M2D[127], "Local", "ImageJ");
-//    vtk_2Dplot(X, M2D[127]);
     simple_show_vec(psf_matrix);
 #endif // PSF_GEN_COMPARE
 
@@ -339,6 +341,14 @@ int main(int argc, const char *argv[])
     } // main loop end
     cap.release();
     vtk1Dplot(MSEstat);
+#endif
+
+#ifdef TIFF_WRITE_TEST
+    cv::Mat image;
+    image = cv::imread("images/born_wolf.png", 0);
+    cv::imshow("Born", image);
+    SingleMatToTiff(image, "born.tiff");
+    cv::waitKey(-1);
 #endif
 
     return 0;
